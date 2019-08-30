@@ -21,7 +21,7 @@ server=True
   * First version
 
 # Tags are comma separated with spaces allowed
-tags=filter,layer,navigate,unique values,automatic
+tags=filter,layer,navigate,unique values,automatic,atlas
 
 homepage=https://www.xl-optim.com/get-them-filtered
 tracker=https://github.com/pedrocamargo/getthemfiltered/issues
