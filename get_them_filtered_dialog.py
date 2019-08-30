@@ -34,7 +34,11 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
 
+        self.rdo_single.toggled.connect(self.single_or_multi)
+        # self.rdo_multi.toggled.connect(self.single_or_multi)
+
         self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
+
         self.cob_field.fieldChanged.connect(self.changed_field)
 
         self.list_values.itemSelectionChanged.connect(self.selected_value)
@@ -43,17 +47,25 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         self.but_deselect_all.clicked.connect(self.deselect_all)
         self.but_select_all.clicked.connect(self.select_all)
 
-
         # Extra attributes
         self.layer = None
         self.field = None
 
         self.add_fields_to_cboxes()
 
+    def single_or_multi(self):
+        if self.rdo_single.isChecked():
+            self.deselect_all()
+            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        else:
+            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+
     def add_fields_to_cboxes(self):
         self.reset_filter()
         self.layer = self.cob_layer.currentLayer()
         self.field = None
+        if type(self.layer) != qgis.core.QgsVectorLayer:
+            self.layer = None
         if self.layer is not None:
             self.cob_field.setLayer(self.layer)
         self.changed_field()
@@ -68,6 +80,8 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
             self.layer.setSubsetString("")
 
     def do_filtering(self):
+        if self.layer is None:
+            return
         table = self.list_values
         table.clear()
 

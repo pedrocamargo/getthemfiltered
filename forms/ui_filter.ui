@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>290</width>
-    <height>452</height>
+    <width>287</width>
+    <height>488</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -98,7 +98,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>110</y>
+     <y>106</y>
      <width>249</width>
      <height>299</height>
     </rect>
@@ -151,7 +151,7 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>415</y>
+     <y>411</y>
      <width>91</width>
      <height>30</height>
     </rect>
@@ -170,7 +170,7 @@
    <property name="geometry">
     <rect>
      <x>150</x>
-     <y>415</y>
+     <y>411</y>
      <width>101</width>
      <height>30</height>
     </rect>
@@ -183,6 +183,47 @@
    </property>
    <property name="text">
     <string>De-select all</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="rdo_single">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>460</y>
+     <width>91</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Roboto</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>1 element</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="rdo_multi">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>460</y>
+     <width>121</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Roboto</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Many elements</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>
