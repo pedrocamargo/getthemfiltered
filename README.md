@@ -12,3 +12,6 @@ according to the unique values from a chosen field.
 
 The release of this tool is documented here:  https://www.xl-optim.com/get-them-filtered
  
+ There is also a video tutorial!
+ 
+ [![IMAGE ALT TEXT](http://img.youtube.com/vi/mezVTQAmitI/0.jpg)](http://www.youtube.com/watch?v=mezVTQAmitI "GetThemFiltered video tutorial")
