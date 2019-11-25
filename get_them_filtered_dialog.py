@@ -13,6 +13,7 @@ import sys
 import qgis
 from qgis.PyQt import QtWidgets, uic, QtGui, QtCore, QtWidgets
 from qgis.PyQt.QtWidgets import *
+from qgis.core import QgsProject
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
@@ -53,6 +54,15 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
 
         self.add_fields_to_cboxes()
 
+    def check_layer(self):
+        if self.layer is None:
+            self.list_values.clear()
+            return False
+        if self.layer not in QgsProject.instance().mapLayers().values():
+            self.list_values.clear()
+            return False
+        return True
+
     def single_or_multi(self):
         if self.rdo_single.isChecked():
             self.deselect_all()
@@ -64,11 +74,12 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         self.reset_filter()
         self.layer = self.cob_layer.currentLayer()
         self.field = None
-        if type(self.layer) != qgis.core.QgsVectorLayer:
-            self.layer = None
-        if self.layer is not None:
+        if self.check_layer():
             self.cob_field.setLayer(self.layer)
-        self.changed_field()
+            self.changed_field()
+        else:
+            if type(self.layer) != qgis.core.QgsVectorLayer:
+                self.layer = None
 
     def changed_field(self):
         self.reset_filter()
@@ -76,11 +87,11 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         self.do_filtering()
 
     def reset_filter(self):
-        if self.layer is not None:
+        if self.check_layer():
             self.layer.setSubsetString("")
 
     def do_filtering(self):
-        if self.layer is None:
+        if not self.check_layer():
             return
         table = self.list_values
         table.clear()
@@ -109,7 +120,7 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
                 self.apply_filter(l)
 
     def apply_filter(self, list_of_values):
-        if self.layer is None:
+        if not self.check_layer():
             return
 
         filter_expression = '"{}" = \'{}\''.format(self.field, list_of_values[0])
