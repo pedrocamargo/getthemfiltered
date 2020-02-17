@@ -61,6 +61,8 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         if self.layer not in QgsProject.instance().mapLayers().values():
             self.list_values.clear()
             return False
+        if not isinstance(self.layer, qgis.core.QgsVectorLayer):
+            return False
         return True
 
     def single_or_multi(self):
@@ -78,7 +80,7 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
             self.cob_field.setLayer(self.layer)
             self.changed_field()
         else:
-            if type(self.layer) != qgis.core.QgsVectorLayer:
+            if not isinstance(self.layer, qgis.core.QgsVectorLayer):
                 self.layer = None
 
     def changed_field(self):
