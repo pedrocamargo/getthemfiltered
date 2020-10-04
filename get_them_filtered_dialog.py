@@ -102,7 +102,7 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         values = []
         for feat in self.layer.getFeatures():
             values.append(feat.attributes()[idx])
-        values = [str(x) for x in set(values)]
+        values = sorted([str(x) for x in set(values)])
         table.addItems(values)
         self.select_all()
         # for v in set(values):
