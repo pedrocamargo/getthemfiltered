@@ -65,9 +65,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if self.layer not in QgsProject.instance().mapLayers().values():
             self.list_values.clear()
             return False
-        if not isinstance(self.layer, qgis.core.QgsVectorLayer):
-            return False
-        return True
+        return isinstance(self.layer, qgis.core.QgsVectorLayer)
 
     def single_or_multi(self):
         if self.rdo_single.isChecked():
@@ -83,9 +81,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if self.check_layer():
             self.cob_field.setLayer(self.layer)
             self.changed_field()
-        else:
-            if not isinstance(self.layer, qgis.core.QgsVectorLayer):
-                self.layer = None
+        elif not isinstance(self.layer, qgis.core.QgsVectorLayer):
+            self.layer = None
 
     def changed_field(self):
         self.reset_filter()
@@ -118,18 +115,17 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def selected_value(self):
         if self.chb_go.isChecked():
-            l = [i.text() for i in self.list_values.selectedItems()]
-            if l:
+            if l := [i.text() for i in self.list_values.selectedItems()]:
                 self.apply_filter(l)
 
     def apply_filter(self, list_of_values):
         if not self.check_layer():
             return
 
-        filter_expression = '"{}" = \'{}\''.format(self.field, list_of_values[0])
+        filter_expression = f""""{self.field}" = \'{list_of_values[0]}\'"""
         if len(list_of_values) > 1:
             for i in list_of_values[1:]:
-                filter_expression = filter_expression + ' OR "{}" = \'{}\''.format(self.field, i)
+                filter_expression = f"""{filter_expression} OR "{self.field}" = \'{i}\'"""
         self.layer.setSubsetString(filter_expression)
 
         self.do_zooming()
