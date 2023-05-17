@@ -29,6 +29,9 @@
         <pointsize>11</pointsize>
        </font>
       </property>
+      <property name="filters">
+       <set>QgsMapLayerProxyModel::AnnotationLayer|QgsMapLayerProxyModel::HasGeometry|QgsMapLayerProxyModel::LineLayer|QgsMapLayerProxyModel::NoGeometry|QgsMapLayerProxyModel::PluginLayer|QgsMapLayerProxyModel::PointCloudLayer|QgsMapLayerProxyModel::PointLayer|QgsMapLayerProxyModel::PolygonLayer|QgsMapLayerProxyModel::VectorLayer|QgsMapLayerProxyModel::VectorTileLayer</set>
+      </property>
      </widget>
     </item>
     <item row="1" column="0" colspan="2">
