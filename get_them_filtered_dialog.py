@@ -7,6 +7,7 @@
         email                : c@margo.co
 
 """
+from ast import literal_eval
 import os
 import sys
 
@@ -32,6 +33,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
+    plugin_id = "get_em_filtered"
 
     def __init__(self, iface, parent=None):
         QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
@@ -52,11 +54,65 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.but_deselect_all.clicked.connect(self.deselect_all)
         self.but_select_all.clicked.connect(self.select_all)
 
-        # Extra attributes
         self.layer = None
+        # Extra attributes
         self.field = None
+        
+        proj = QgsProject.instance()
+        raw_layer_id, type_conversion_ok = proj.readEntry(
+            self.plugin_id,
+            "layer"
+        )
+        if raw_layer_id:
+            # try:
+            self.layer = QgsProject.instance().mapLayer(raw_layer_id)
+            # except Exception:  # TODO More specific exception
+            #     print("Get em filtered: saved layer not found in project")
+
+        if self.layer:
+            field, values = self.load_from_subset_string(self.layer.subsetString())
+            if field and values:
+                self.field = field
+            else: 
+                loaded_field, type_conversion_ok = proj.readEntry(
+                    self.plugin_id,
+                    "field"
+                )
+                if loaded_field:
+                    self.field = loaded_field
+
 
         self.add_fields_to_cboxes()
+
+    @staticmethod
+    def load_from_subset_string(subset_string: str) -> tuple[str, list] | tuple[None, None]:
+        #  "Jurisdiction" = 'Ashford' OR "Jurisdiction" = 'Ansonia'
+        split_selectors = subset_string.split(" OR ")
+        values = set()
+        field = ''
+        for count, item in enumerate(split_selectors):
+            new_field, separator, value = item.partition(" = ")
+            new_field = literal_eval(new_field)
+            if count > 0 and new_field != field:
+                # There should only be one value for field, if this plugin created the saved filter
+                return None
+            field = new_field
+            value = literal_eval(value)
+            values.append(value)
+        return field, values
+    
+    def save_filter(self):
+        proj = QgsProject.instance()
+        proj.writeEntry(
+            self.plugin_id,
+            "layer",
+            self.layer,
+        )
+        proj.writeEntry(
+            self.plugin_id,
+            "field",
+            self.field,
+        )
 
     def check_layer(self):
         if self.layer is None:
