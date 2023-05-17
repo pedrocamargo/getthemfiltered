@@ -103,10 +103,6 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         values = sorted(str(value) for value in self.layer.uniqueValues(idx))
         table.addItems(values)
         self.select_all()
-        # for v in set(values):
-        #     it = QtWidgets.QListWidgetItem(str(v))
-        #     table.addItem(it)
-        #     it.setSelected(True)
 
     def do_zooming(self):
         if self.chb_zoom.isChecked():
@@ -121,11 +117,10 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def apply_filter(self, list_of_values):
         if not self.check_layer():
             return
-
-        filter_expression = f""""{self.field}" = \'{list_of_values[0]}\'"""
-        if len(list_of_values) > 1:
-            for i in list_of_values[1:]:
-                filter_expression = f"""{filter_expression} OR "{self.field}" = \'{i}\'"""
+        
+        filter_expression = " OR ".join(
+            f'"{self.field}" = \'{i}\'' for i in list_of_values
+        )
         self.layer.setSubsetString(filter_expression)
 
         self.do_zooming()
