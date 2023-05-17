@@ -27,10 +27,10 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'forms/ui_filter.ui'))
 
 
-class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
+class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def __init__(self, iface, parent=None):
-        QtWidgets.QDialog.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
+        QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
 
         self.setupUi(self)
         self.iface = iface
