@@ -14,6 +14,8 @@ import qgis
 from qgis.PyQt import QtWidgets, uic, QtGui, QtCore, QtWidgets
 from qgis.PyQt.QtWidgets import *
 from qgis.core import QgsProject
+from qgis.PyQt.QtCore import pyqtSignal
+
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
@@ -28,6 +30,8 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
+
+    closingPlugin = pyqtSignal()
 
     def __init__(self, iface, parent=None):
         QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
@@ -138,3 +142,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def select_all(self):
         self.list_values.selectAll()
+
+    def closeEvent(self, event):
+        self.closingPlugin.emit()
+        event.accept()

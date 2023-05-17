@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 import os.path
-from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
+from qgis.PyQt.QtCore import Qt, QSettings, QTranslator, qVersion, QCoreApplication
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtGui import QIcon
 from .get_them_filtered_dialog import GetThemFilteredDialog
@@ -25,12 +25,14 @@ class getThemFiltered(object):
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
         self.icon_path = os.path.join(self.plugin_dir, 'icon.svg')
-        self.dlg = GetThemFilteredDialog(self.iface)
         self.actions = []
         self.menu = self.tr(u'&GetThemFiltered')
 
         self.toolbar = self.iface.addToolBar(u'GetThemFiltered')
         self.toolbar.setObjectName(u'GetThemFiltered')
+        
+        self.pluginIsActive = False
+        self.dockwidget = None
 
     def tr(self, message):
         """
@@ -60,6 +62,27 @@ class getThemFiltered(object):
             self.iface.removePluginMenu(self.tr(u'&GetThemFiltered'), action)
             self.iface.removeToolBarIcon(action)
 
+    def onClosePlugin(self):
+        """Cleanup necessary items here when plugin dockwidget is closed"""
+
+        # disconnects
+        self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
+
+        self.pluginIsActive = False
+
     def run(self):
-        self.dlg.show()
-        self.dlg.exec_()
+        if not self.pluginIsActive:
+            self.pluginIsActive = True
+            if self.dockwidget is None:
+                self.dockwidget = GetThemFilteredDialog(self.iface)
+
+            self.dockwidget.closingPlugin.connect(self.onClosePlugin)
+
+            self.iface.addDockWidget(
+                area = Qt.LeftDockWidgetArea,
+                dockwidget = self.dockwidget,
+            )
+
+
+            self.dockwidget.show()
+            # self.dlg.exec_()
