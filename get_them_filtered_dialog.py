@@ -7,16 +7,15 @@
         email                : c@margo.co
 
 """
-from ast import literal_eval
 import os
 import sys
+from ast import literal_eval
 
 import qgis
-from qgis.PyQt import QtWidgets, uic, QtGui, QtCore, QtWidgets
-from qgis.PyQt.QtWidgets import *
-from qgis.core import QgsProject
+from qgis.core import QgsProject, QgsMapLayer
+from qgis.PyQt import QtCore, QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-
+from qgis.PyQt.QtWidgets import *
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
@@ -26,12 +25,12 @@ try:
 except ImportError:
     pass
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'forms/ui_filter.ui'))
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), "forms/ui_filter.ui")
+)
 
 
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
-
     closingPlugin = pyqtSignal()
     plugin_id = "get_em_filtered"
 
@@ -54,67 +53,138 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.but_deselect_all.clicked.connect(self.deselect_all)
         self.but_select_all.clicked.connect(self.select_all)
 
-        self.layer = None
         # Extra attributes
+        self.layer = None
         self.field = None
-        
-        proj = QgsProject.instance()
-        raw_layer_id, type_conversion_ok = proj.readEntry(
-            self.plugin_id,
-            "layer"
-        )
-        if raw_layer_id:
-            # try:
-            self.layer = QgsProject.instance().mapLayer(raw_layer_id)
-            # except Exception:  # TODO More specific exception
-            #     print("Get em filtered: saved layer not found in project")
+        self.load_saved_filter()
 
+        # self.add_fields_to_cboxes()
+
+    @staticmethod
+    def load_from_subset_string(
+        subset_string: str,
+    ) -> tuple[str, list] | tuple[None, None]:
+        #  "Jurisdiction" = 'Ashford' OR "Jurisdiction" = 'Ansonia'
+        split_selectors = subset_string.split(" OR ")
+        values = set()
+        for count, item in enumerate(split_selectors):
+            new_field, separator, value = item.partition(" = ")
+            new_field = literal_eval(new_field)
+            if count == 0:
+                field = new_field
+            elif new_field != field:
+                # If this plugin created the saved filter, there should only be one value for field
+                return None, None
+            value = literal_eval(value)
+            values.append(value)
+        return field, values
+
+    def load_saved_filter(self) -> None:
+        proj = QgsProject.instance()
+        layer_id, type_conversion_ok = proj.readEntry(self.plugin_id, "layer")
+        self.layer = proj.mapLayer(layer_id)
         if self.layer:
             field, values = self.load_from_subset_string(self.layer.subsetString())
             if field and values:
                 self.field = field
-            else: 
-                loaded_field, type_conversion_ok = proj.readEntry(
-                    self.plugin_id,
-                    "field"
-                )
+            else:
+                loaded_field = self.field_saved
                 if loaded_field:
                     self.field = loaded_field
+        if self.filtering_saved:
+            self.chb_go.setChecked(True)
+        if self.zoom_saved:
+            self.chb_zoom.setChecked(True)
+        if self.single_saved:
+            self.rdo_single.setChecked(True)
 
-
-        self.add_fields_to_cboxes()
-
-    @staticmethod
-    def load_from_subset_string(subset_string: str) -> tuple[str, list] | tuple[None, None]:
-        #  "Jurisdiction" = 'Ashford' OR "Jurisdiction" = 'Ansonia'
-        split_selectors = subset_string.split(" OR ")
-        values = set()
-        field = ''
-        for count, item in enumerate(split_selectors):
-            new_field, separator, value = item.partition(" = ")
-            new_field = literal_eval(new_field)
-            if count > 0 and new_field != field:
-                # There should only be one value for field, if this plugin created the saved filter
-                return None
-            field = new_field
-            value = literal_eval(value)
-            values.append(value)
-        return field, values
-    
-    def save_filter(self):
+    @property
+    def layer_saved(self) -> QgsMapLayer | None:
         proj = QgsProject.instance()
-        proj.writeEntry(
+        layer_id, type_conversion_ok = proj.readEntry(
             self.plugin_id,
             "layer",
-            self.layer,
         )
-        proj.writeEntry(
+        return proj.mapLayer(layer_id)
+
+    @layer_saved.setter
+    def layer_saved(self, layer: QgsMapLayer) -> None:
+        QgsProject.instance().writeEntry(
             self.plugin_id,
-            "field",
-            self.field,
+            "layer",
+            layer.id(),
         )
 
-    def check_layer(self):
+    @property
+    def field_saved(self) -> str:
+        loaded_field, type_conversion_ok = QgsProject.instance().readEntry(
+            self.plugin_id,
+            "field",
+            "",
+        )
+        return loaded_field
+
+    @field_saved.setter
+    def field_saved(self, field: str) -> None:
+        QgsProject.instance().writeEntry(
+            self.plugin_id,
+            "field",
+            field,
+        )
+
+    @property
+    def filtering_saved(self) -> bool | None:
+        filtering_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
+            self.plugin_id, "filtering_enabled", None
+        )
+        return filtering_enabled
+
+    @filtering_saved.setter
+    def filtering_saved(self, value: bool) -> None:
+        QgsProject.instance().writeEntryBool(
+            self.plugin_id,
+            "filtering_enabled",
+            value,
+        )
+
+    @property
+    def zoom_saved(self) -> bool | None:
+        zoom_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
+            self.plugin_id, "zoom_to_results", None
+        )
+        return zoom_enabled
+
+    @zoom_saved.setter
+    def zoom_saved(self, value: bool) -> None:
+        QgsProject.instance().writeEntryBool(
+            self.plugin_id,
+            "zoom_to_results",
+            value,
+        )
+
+    @property
+    def single_saved(self) -> bool | None:
+        single_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
+            self.plugin_id, "single_select", None
+        )
+        return single_enabled
+
+    @single_saved.setter
+    def single_saved(self, value: bool) -> None:
+        QgsProject.instance().writeEntryBool(
+            self.plugin_id,
+            "single_select",
+            value,
+        )
+
+    def save_filter(self) -> None:
+        self.layer_saved = self.layer
+        self.field_saved = self.field
+        self.filtering_saved = self.chb_go.isChecked()
+        self.zoom_saved = self.chb_zoom.isChecked()
+        self.single_saved = self.rdo_single.isChecked()
+
+    def check_layer(self) -> bool:
         if self.layer is None:
             self.list_values.clear()
             return False
@@ -126,9 +196,13 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def single_or_multi(self):
         if self.rdo_single.isChecked():
             self.deselect_all()
-            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+            self.list_values.setSelectionMode(
+                QtWidgets.QAbstractItemView.SingleSelection
+            )
         else:
-            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+            self.list_values.setSelectionMode(
+                QtWidgets.QAbstractItemView.MultiSelection
+            )
 
     def add_fields_to_cboxes(self):
         self.reset_filter()
@@ -173,9 +247,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def apply_filter(self, list_of_values):
         if not self.check_layer():
             return
-        
+
         filter_expression = " OR ".join(
-            f'"{self.field}" = \'{i}\'' for i in list_of_values
+            f"\"{self.field}\" = '{i}'" for i in list_of_values
         )
         self.layer.setSubsetString(filter_expression)
 
