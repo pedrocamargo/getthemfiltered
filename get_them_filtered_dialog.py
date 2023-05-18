@@ -59,6 +59,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def load_from_subset_string(
         subset_string: str,
     ) -> Union[tuple[str, list], tuple[None, None]]:
+        """
+        Attempt to convert an existing subset string to this tool's settings
+        """
         #  "Jurisdiction" = 'Ashford' OR "Jurisdiction" = 'Ansonia'
         split_selectors = subset_string.split(" OR ")
         values = set()
@@ -75,6 +78,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         return field, values
 
     def load_saved_filter(self) -> None:
+        """
+        Loads any saved filters from the project file
+        """
         self.layer = self.layer_saved
         if self.layer:
             field, values = self.load_from_subset_string(self.layer.subsetString())
@@ -169,6 +175,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
     def save_filter(self) -> None:
+        """
+        Saves the current filter settings to the project file
+        """
         self.layer_saved = self.layer
         self.field_saved = self.field
         self.filtering_saved = self.chb_go.isChecked()
@@ -184,7 +193,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             return False
         return isinstance(self.layer, qgis.core.QgsVectorLayer)
 
-    def single_or_multi(self):
+    def single_or_multi(self) -> None:
         if self.rdo_single.isChecked():
             self.deselect_all()
             self.list_values.setSelectionMode(
@@ -195,7 +204,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
                 QtWidgets.QAbstractItemView.MultiSelection
             )
 
-    def add_fields_to_cboxes(self):
+    def add_fields_to_cboxes(self) -> None:
         self.reset_filter()
         self.layer = self.cob_layer.currentLayer()
         self.field = None
@@ -205,16 +214,16 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         elif not isinstance(self.layer, qgis.core.QgsVectorLayer):
             self.layer = None
 
-    def changed_field(self):
+    def changed_field(self) -> None:
         self.reset_filter()
         self.field = self.cob_field.currentField()
         self.do_filtering()
 
-    def reset_filter(self):
+    def reset_filter(self) -> None:
         if self.check_layer():
             self.layer.setSubsetString("")
 
-    def do_filtering(self):
+    def do_filtering(self) -> None:
         if not self.check_layer():
             return
         table = self.list_values
@@ -225,33 +234,34 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         table.addItems(values)
         self.select_all()
 
-    def do_zooming(self):
+    def do_zooming(self) -> None:
         if self.chb_zoom.isChecked():
             self.iface.setActiveLayer(self.layer)
             self.iface.zoomToActiveLayer()
 
-    def selected_value(self):
+    def selected_value(self) -> None:
         if self.chb_go.isChecked():
             if l := [i.text() for i in self.list_values.selectedItems()]:
                 self.apply_filter(l)
 
-    def apply_filter(self, list_of_values):
+    def apply_filter(self, list_of_values) -> None:
         if not self.check_layer():
             return
 
         filter_expression = " OR ".join(
-            f"\"{self.field}\" = '{i}'" for i in list_of_values
+            f"\"{self.field}\" = '{value}'" for value in list_of_values
         )
         self.layer.setSubsetString(filter_expression)
 
         self.do_zooming()
 
-    def deselect_all(self):
+    def deselect_all(self) -> None:
         self.list_values.clearSelection()
 
-    def select_all(self):
+    def select_all(self) -> None:
         self.list_values.selectAll()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event) -> None:
+        self.save_filter()
         self.closingPlugin.emit()
         event.accept()
