@@ -7,10 +7,12 @@
         email                : c@margo.co
 
 """
+
+import contextlib
 import os
 import sys
 from ast import literal_eval
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 import qgis
 from qgis.core import QgsMapLayer, QgsProject
@@ -38,7 +40,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.rdo_single.toggled.connect(self.single_or_multi)
         # self.rdo_multi.toggled.connect(self.single_or_multi)
 
-        self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
+        # self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
+        self.cob_layer.layerChanged.connect(self.do_filtering)
 
         self.cob_field.fieldChanged.connect(self.changed_field)
 
@@ -49,11 +52,31 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.but_select_all.clicked.connect(self.select_all)
 
         # Extra attributes
-        self.layer = None
-        self.field = None
+        self._layer = None
+        self._field = None
         self.load_saved_filter()
 
-        self.add_fields_to_cboxes()
+        self.do_filtering()
+
+        # self.add_fields_to_cboxes()
+
+    @property
+    def layer(self) -> QgsMapLayer:
+        return self.cob_layer.currentLayer()
+
+    @layer.setter
+    def layer(self, layer: QgsMapLayer) -> None:
+        self.cob_layer.setLayer(layer)
+        self.cob_field.setLayer(layer)
+
+    @property
+    def field(self) -> str:
+        return self.cob_field.currentField()
+
+    @field.setter
+    def field(self, fieldname: str) -> None:
+        self.cob_field.setField(fieldname)
+        self.do_filtering()
 
     @staticmethod
     def load_from_subset_string(
@@ -81,13 +104,18 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Loads any saved filters from the project file
         """
-        self.layer = self.layer_saved
-        if self.layer:
-            field, values = self.load_from_subset_string(self.layer.subsetString())
-            if field and values:
-                self.field = field
-            elif loaded_field := self.field_saved:
+        if self.layer_saved:
+            self.layer = self.layer_saved
+            # field, values = self.load_from_subset_string(self.layer.subsetString())
+            # if field and values:
+            #     self.field = field
+            #     # self.add_fields_to_cboxes()
+            #     self.selected_values = values
+            # elif loaded_field := self.field_saved:
+            if loaded_field := self.field_saved:
                 self.field = loaded_field
+                # self.do_filtering()
+                self.selected_values = self.values_saved
         if self.filtering_saved:
             self.chb_go.setChecked(True)
         if self.zoom_saved:
@@ -128,6 +156,18 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             "field",
             field,
         )
+
+    @property
+    def values_saved(self) -> list[str]:
+        loaded_values, type_conversion_ok = QgsProject.instance().readListEntry(
+            self.plugin_id,
+            "values",
+        )
+        return loaded_values
+
+    @values_saved.setter
+    def values_saved(self, values: Iterable[str]) -> None:
+        QgsProject.instance().writeEntry(self.plugin_id, "values", values)
 
     @property
     def filtering_saved(self) -> bool:
@@ -180,6 +220,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         self.layer_saved = self.layer
         self.field_saved = self.field
+        self.values_saved = self.selected_values
         self.filtering_saved = self.chb_go.isChecked()
         self.zoom_saved = self.chb_zoom.isChecked()
         self.single_saved = self.rdo_single.isChecked()
@@ -226,8 +267,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def do_filtering(self) -> None:
         if not self.check_layer():
             return
-        table = self.list_values
-        table.clear()
+        self.list_values.clear()
 
         idx = self.layer.dataProvider().fieldNameIndex(self.field)
         values = sorted(str(value) for value in self.layer.uniqueValues(idx))
@@ -241,7 +281,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def selected_value(self) -> None:
         if self.chb_go.isChecked():
-            if l := [i.text() for i in self.list_values.selectedItems()]:
+            if l := self.selected_values:
                 self.apply_filter(l)
 
     def apply_filter(self, list_of_values) -> None:
@@ -260,6 +300,20 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def select_all(self) -> None:
         self.list_values.selectAll()
+
+    @property
+    def selected_values(self) -> list[str]:
+        return [item.text() for item in self.list_values.selectedItems()]
+
+    @selected_values.setter
+    def selected_values(self, input_values: Iterable[str]) -> None:
+        self.list_values.clearSelection()
+        for value in input_values:
+            with contextlib.suppress(IndexError):
+                self.list_values.findItems(value, QtCore.Qt.MatchExactly)[
+                    0
+                ].setSelected(True)
+        self.selected_value()
 
     def closeEvent(self, event) -> None:
         self.save_filter()
