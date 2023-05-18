@@ -20,11 +20,6 @@ from qgis.PyQt.QtWidgets import *
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
 
-try:
-    from qgis.core import QgsMapLayerRegistry
-except ImportError:
-    pass
-
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "forms/ui_filter.ui")
 )
