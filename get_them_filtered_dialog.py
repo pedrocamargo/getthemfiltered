@@ -74,7 +74,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
                 # If this plugin created the saved filter, there should only be one value for field
                 return None, None
             value = literal_eval(value)
-            values.append(value)
+            values.add(value)
         return field, values
 
     def load_saved_filter(self) -> None:
