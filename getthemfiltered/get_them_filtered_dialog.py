@@ -10,12 +10,12 @@
 import os
 import sys
 from ast import literal_eval
+from typing import Optional, Union
 
 import qgis
 from qgis.core import QgsProject, QgsMapLayer
-from qgis.PyQt import QtCore, QtGui, QtWidgets, uic
+from qgis.PyQt import QtCore, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.PyQt.QtWidgets import *
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
@@ -58,7 +58,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     @staticmethod
     def load_from_subset_string(
         subset_string: str,
-    ) -> tuple[str, list] | tuple[None, None]:
+    ) -> Union[tuple[str, list], tuple[None, None]]:
         #  "Jurisdiction" = 'Ashford' OR "Jurisdiction" = 'Ansonia'
         split_selectors = subset_string.split(" OR ")
         values = set()
@@ -75,17 +75,13 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         return field, values
 
     def load_saved_filter(self) -> None:
-        proj = QgsProject.instance()
-        layer_id, type_conversion_ok = proj.readEntry(self.plugin_id, "layer")
-        self.layer = proj.mapLayer(layer_id)
+        self.layer = self.layer_saved
         if self.layer:
             field, values = self.load_from_subset_string(self.layer.subsetString())
             if field and values:
                 self.field = field
-            else:
-                loaded_field = self.field_saved
-                if loaded_field:
-                    self.field = loaded_field
+            elif loaded_field := self.field_saved:
+                self.field = loaded_field
         if self.filtering_saved:
             self.chb_go.setChecked(True)
         if self.zoom_saved:
@@ -94,7 +90,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             self.rdo_single.setChecked(True)
 
     @property
-    def layer_saved(self) -> QgsMapLayer | None:
+    def layer_saved(self) -> Optional[QgsMapLayer]:
         proj = QgsProject.instance()
         layer_id, type_conversion_ok = proj.readEntry(
             self.plugin_id,
@@ -128,9 +124,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
     @property
-    def filtering_saved(self) -> bool | None:
+    def filtering_saved(self) -> bool:
         filtering_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
-            self.plugin_id, "filtering_enabled", None
+            self.plugin_id, "filtering_enabled"
         )
         return filtering_enabled
 
@@ -143,9 +139,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
     @property
-    def zoom_saved(self) -> bool | None:
+    def zoom_saved(self) -> bool:
         zoom_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
-            self.plugin_id, "zoom_to_results", None
+            self.plugin_id, "zoom_to_results"
         )
         return zoom_enabled
 
@@ -158,9 +154,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
     @property
-    def single_saved(self) -> bool | None:
+    def single_saved(self) -> bool:
         single_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
-            self.plugin_id, "single_select", None
+            self.plugin_id, "single_select"
         )
         return single_enabled
 
