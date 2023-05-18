@@ -13,7 +13,7 @@ from ast import literal_eval
 from typing import Optional, Union
 
 import qgis
-from qgis.core import QgsProject, QgsMapLayer
+from qgis.core import QgsMapLayer, QgsProject
 from qgis.PyQt import QtCore, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 
@@ -53,7 +53,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.field = None
         self.load_saved_filter()
 
-        # self.add_fields_to_cboxes()
+        self.add_fields_to_cboxes()
 
     @staticmethod
     def load_from_subset_string(
