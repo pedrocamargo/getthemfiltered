@@ -120,7 +120,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             self.chb_go.setChecked(True)
         if self.zoom_saved:
             self.chb_zoom.setChecked(True)
-        if self.single_saved:
+        if self.single_or_multi_saved:
             self.rdo_single.setChecked(True)
 
     @property
@@ -200,14 +200,14 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
     @property
-    def single_saved(self) -> bool:
+    def single_or_multi_saved(self) -> bool:
         single_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
             self.plugin_id, "single_select"
         )
         return single_enabled
 
-    @single_saved.setter
-    def single_saved(self, value: bool) -> None:
+    @single_or_multi_saved.setter
+    def single_or_multi_saved(self, value: bool) -> None:
         QgsProject.instance().writeEntryBool(
             self.plugin_id,
             "single_select",
@@ -223,7 +223,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.values_saved = self.selected_values
         self.filtering_saved = self.chb_go.isChecked()
         self.zoom_saved = self.chb_zoom.isChecked()
-        self.single_saved = self.rdo_single.isChecked()
+        self.single_or_multi_saved = self.rdo_single.isChecked()
 
     def check_layer(self) -> bool:
         if self.layer is None:
