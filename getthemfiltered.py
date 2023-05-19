@@ -48,19 +48,24 @@ class getThemFiltered:
 
         """Add a toolbar icon to the toolbar."""
         icon = QIcon(self.icon_path)
-        action = QAction(icon, self.tr(u'GetThemFiltered'), self.iface.mainWindow())
-        action.triggered.connect(self.run)
-        action.setEnabled(True)
+        self.panelAction = QAction(icon, self.tr(u'GetThemFiltered'), self.iface.mainWindow())
+        self.panelAction.triggered.connect(self.run)
+        self.panelAction.triggered.connect(self.openWidget)
+        self.panelAction.setCheckable(True)
+        self.panelAction.setEnabled(True)
 
-        self.toolbar.addAction(action)
-        self.iface.addPluginToMenu(self.menu, action)
-        self.actions.append(action)
+        self.toolbar.addAction(self.panelAction)
+        self.iface.addPluginToMenu(self.menu, self.panelAction)
+        self.actions.append(self.panelAction)
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(self.tr(u'&GetThemFiltered'), action)
             self.iface.removeToolBarIcon(action)
+
+    def widgetVisibilityChanged(self, visible: bool) -> None:
+        self.panelAction.setChecked(visible)
 
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
@@ -70,19 +75,19 @@ class getThemFiltered:
 
         self.pluginIsActive = False
 
+    def openWidget(self, show: bool) -> None:
+        self.dockwidget.setVisible(show)
+
     def run(self):
         if not self.pluginIsActive:
             self.pluginIsActive = True
             if self.dockwidget is None:
                 self.dockwidget = GetThemFilteredDialog(self.iface)
+            self.dockwidget.visibilityChanged.connect(self.widgetVisibilityChanged)
 
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
 
             self.iface.addDockWidget(
-                area = Qt.LeftDockWidgetArea,
-                dockwidget = self.dockwidget,
+                area=Qt.LeftDockWidgetArea,
+                dockwidget=self.dockwidget,
             )
-
-
-            self.dockwidget.show()
-            # self.dlg.exec_()
