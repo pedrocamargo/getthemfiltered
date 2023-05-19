@@ -75,10 +75,6 @@ class getThemFiltered:
         self.pluginIsActive = False
 
     def run(self, checked: bool):
-        # The triggered signal includes a bool 
-        # that indicates whether the button was checked or unchecked
-        self.dockwidget.setVisible(checked)
-
         if not self.pluginIsActive:
             self.pluginIsActive = True
             if self.dockwidget is None:
@@ -91,3 +87,7 @@ class getThemFiltered:
                 area=Qt.LeftDockWidgetArea,
                 dockwidget=self.dockwidget,
             )
+            
+        # The triggered signal includes a bool 
+        # that indicates whether the button was checked or unchecked
+        self.dockwidget.setVisible(checked)
