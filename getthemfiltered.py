@@ -18,7 +18,7 @@ from qgis.PyQt.QtGui import QIcon
 from .get_them_filtered_dialog import GetThemFilteredDialog
 
 
-class getThemFiltered(object):
+class getThemFiltered:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
