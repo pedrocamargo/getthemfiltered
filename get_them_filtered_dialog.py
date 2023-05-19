@@ -16,8 +16,8 @@ from typing import Iterable, Optional, Union
 
 import qgis
 from qgis.core import QgsMapLayer, QgsProject
-from qgis.PyQt import QtCore, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
@@ -32,7 +32,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     plugin_id = "get_em_filtered"
 
     def __init__(self, iface, parent=None):
-        QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
+        QtWidgets.QDockWidget.__init__(self, None, Qt.WindowStaysOnTopHint)
 
         self.setupUi(self)
         self.iface = iface
@@ -43,7 +43,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         # self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
         self.cob_layer.layerChanged.connect(self.do_filtering)
 
-        self.cob_field.fieldChanged.connect(self.changed_field)
+        self.cob_field.fieldChanged.connect(self.changed_field, type=Qt.QueuedConnection)
 
         self.list_values.itemSelectionChanged.connect(self.selected_value)
         self.chb_zoom.toggled.connect(self.do_zooming)
@@ -284,7 +284,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             if l := self.selected_values:
                 self.apply_filter(l)
 
-    def apply_filter(self, list_of_values) -> None:
+    def apply_filter(self, list_of_values: Iterable[str]) -> None:
         if not self.check_layer():
             return
 
@@ -310,7 +310,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.list_values.clearSelection()
         for value in input_values:
             with contextlib.suppress(IndexError):
-                self.list_values.findItems(value, QtCore.Qt.MatchExactly)[
+                self.list_values.findItems(value, Qt.MatchExactly)[
                     0
                 ].setSelected(True)
         self.selected_value()
