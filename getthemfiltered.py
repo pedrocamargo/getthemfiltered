@@ -50,7 +50,6 @@ class getThemFiltered:
         icon = QIcon(self.icon_path)
         self.panelAction = QAction(icon, self.tr(u'GetThemFiltered'), self.iface.mainWindow())
         self.panelAction.triggered.connect(self.run)
-        self.panelAction.triggered.connect(self.openWidget)
         self.panelAction.setCheckable(True)
         self.panelAction.setEnabled(True)
 
@@ -75,10 +74,11 @@ class getThemFiltered:
 
         self.pluginIsActive = False
 
-    def openWidget(self, show: bool) -> None:
-        self.dockwidget.setVisible(show)
+    def run(self, checked: bool):
+        # The triggered signal includes a bool 
+        # that indicates whether the button was checked or unchecked
+        self.dockwidget.setVisible(checked)
 
-    def run(self):
         if not self.pluginIsActive:
             self.pluginIsActive = True
             if self.dockwidget is None:
