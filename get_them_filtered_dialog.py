@@ -12,12 +12,12 @@ import contextlib
 import os
 import sys
 from ast import literal_eval
-from typing import Iterable, Optional, Union
+from typing import Iterable, Literal, Optional, Union
 
 import qgis
 from qgis.core import QgsMapLayer, QgsProject
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt
+from qgis.PyQt.QtCore import Qt, pyqtSignal
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
