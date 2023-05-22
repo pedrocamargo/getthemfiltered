@@ -278,22 +278,35 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             if l := self.selected_values:
                 self.apply_filter(l)
 
-    def apply_filter(self, list_of_values: Iterable[str]) -> None:
-        if not self.check_layer():
+    def apply_filter(self, list_of_values: Union[Iterable[str], Literal[True]]) -> None:
+        if not self.validate_layer():
             return
-
-        filter_expression = " OR ".join(
-            f"\"{self.field}\" = '{value}'" for value in list_of_values
-        )
+        
+        if not list_of_values:
+            # Return nothing
+            filter_expression = "TRUE = FALSE"
+        elif list_of_values is True or self.all_selected:
+            filter_expression = ''
+        else:
+            formatted_list_of_values = ', '.join(f"'{value}'" for value in list_of_values)
+            filter_expression = f'"{self.field}" IN ({formatted_list_of_values})'
         self.layer.setSubsetString(filter_expression)
 
         self.do_zooming()
 
     def deselect_all(self) -> None:
         self.list_values.clearSelection()
+        self.apply_filter([])
 
     def select_all(self) -> None:
         self.list_values.selectAll()
+        self.apply_filter(True)
+
+    @property
+    def all_selected(self) -> bool:
+        return all(
+            item.isSelected() for item in self.list_values.findItems("*", Qt.MatchWildcard)
+        )
 
     @property
     def selected_values(self) -> list[str]:
