@@ -53,8 +53,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.but_select_all.clicked.connect(self.select_all)
 
         # Extra attributes
-        self._layer = None
         self.values_loaded = False
+        self.add_fields_to_cboxes()
         self.load_saved_filter()
 
 
@@ -241,8 +241,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def add_fields_to_cboxes(self) -> None:
         self.reset_filter()
-        self.field = None
         if self.validate_layer():
+            self.cob_field.setLayer(self.layer)
+            self.field = None
             self.changed_field()
         elif not isinstance(self.layer, qgis.core.QgsVectorLayer):
             self.layer = None
