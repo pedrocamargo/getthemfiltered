@@ -106,12 +106,6 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         if self.layer_saved:
             self.layer = self.layer_saved
-            # field, values = self.load_from_subset_string(self.layer.subsetString())
-            # if field and values:
-            #     self.field = field
-            #     # self.add_fields_to_cboxes()
-            #     self.selected_values = values
-            # elif loaded_field := self.field_saved:
             if loaded_field := self.field_saved:
                 self.field = loaded_field
                 # self.do_filtering()
