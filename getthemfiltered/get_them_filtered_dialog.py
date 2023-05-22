@@ -37,13 +37,14 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
 
+        self.iface.projectRead.connect(self.load_saved_filter)
+
         self.rdo_single.toggled.connect(self.single_or_multi)
         # self.rdo_multi.toggled.connect(self.single_or_multi)
 
-        # self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
-        self.cob_layer.layerChanged.connect(self.do_filtering)
+        self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
 
-        self.cob_field.fieldChanged.connect(self.changed_field, type=Qt.QueuedConnection)
+        self.cob_field.fieldChanged.connect(self.populate_values_list)
 
         self.list_values.itemSelectionChanged.connect(self.selected_value)
         self.chb_zoom.toggled.connect(self.do_zooming)
@@ -53,12 +54,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Extra attributes
         self._layer = None
-        self._field = None
+        self.values_loaded = False
         self.load_saved_filter()
 
-        self.do_filtering()
-
-        # self.add_fields_to_cboxes()
 
     @property
     def layer(self) -> QgsMapLayer:
@@ -74,9 +72,10 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         return self.cob_field.currentField()
 
     @field.setter
-    def field(self, fieldname: str) -> None:
+    def field(self, fieldname: Optional[str]) -> None:
         self.cob_field.setField(fieldname)
-        self.do_filtering()
+        if not fieldname:
+            self.list_values.clear()
 
     @staticmethod
     def load_from_subset_string(
@@ -104,18 +103,19 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Loads any saved filters from the project file
         """
-        if self.layer_saved:
-            self.layer = self.layer_saved
-            if loaded_field := self.field_saved:
-                self.field = loaded_field
-                # self.do_filtering()
-                self.selected_values = self.values_saved
         if self.filtering_saved:
             self.chb_go.setChecked(True)
         if self.zoom_saved:
             self.chb_zoom.setChecked(True)
         if self.single_or_multi_saved:
             self.rdo_single.setChecked(True)
+        if self.layer_saved:
+            self.layer = self.layer_saved
+            if loaded_field := self.field_saved:
+                self.field = loaded_field
+                self.changed_field()
+                self.populate_values_list()
+                self.selected_values = self.values_saved
 
     @property
     def layer_saved(self) -> Optional[QgsMapLayer]:
@@ -152,16 +152,16 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
     @property
-    def values_saved(self) -> list[str]:
+    def values_saved(self) -> set[str]:
         loaded_values, type_conversion_ok = QgsProject.instance().readListEntry(
             self.plugin_id,
             "values",
         )
-        return loaded_values
+        return set(loaded_values)
 
     @values_saved.setter
     def values_saved(self, values: Iterable[str]) -> None:
-        QgsProject.instance().writeEntry(self.plugin_id, "values", values)
+        QgsProject.instance().writeEntry(self.plugin_id, "values", list(values))
 
     @property
     def filtering_saved(self) -> bool:
@@ -219,7 +219,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.zoom_saved = self.chb_zoom.isChecked()
         self.single_or_multi_saved = self.rdo_single.isChecked()
 
-    def check_layer(self) -> bool:
+    def validate_layer(self) -> bool:
         if self.layer is None:
             self.list_values.clear()
             return False
@@ -241,32 +241,28 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def add_fields_to_cboxes(self) -> None:
         self.reset_filter()
-        self.layer = self.cob_layer.currentLayer()
         self.field = None
-        if self.check_layer():
-            self.cob_field.setLayer(self.layer)
+        if self.validate_layer():
             self.changed_field()
         elif not isinstance(self.layer, qgis.core.QgsVectorLayer):
             self.layer = None
 
     def changed_field(self) -> None:
         self.reset_filter()
-        self.field = self.cob_field.currentField()
-        self.do_filtering()
 
     def reset_filter(self) -> None:
-        if self.check_layer():
+        if self.validate_layer():
             self.layer.setSubsetString("")
 
-    def do_filtering(self) -> None:
-        if not self.check_layer():
-            return
+    def populate_values_list(self) -> None:
         self.list_values.clear()
 
         idx = self.layer.dataProvider().fieldNameIndex(self.field)
         values = sorted(str(value) for value in self.layer.uniqueValues(idx))
         table.addItems(values)
-        self.select_all()
+        if self.values_loaded:
+            self.select_all()
+        self.values_loaded = True
 
     def do_zooming(self) -> None:
         if self.chb_zoom.isChecked():
