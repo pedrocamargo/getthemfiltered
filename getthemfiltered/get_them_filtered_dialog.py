@@ -45,7 +45,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.cob_field.fieldChanged.connect(self.populate_values_list)
 
-        self.list_values.itemSelectionChanged.connect(self.selected_value)
+        self.list_values.itemSelectionChanged.connect(self.value_selected)
         self.chb_zoom.toggled.connect(self.do_zooming)
 
         self.but_deselect_all.clicked.connect(self.deselect_all)
@@ -55,7 +55,6 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.values_loaded = False
         self.add_fields_to_cboxes()
         self.load_saved_filter()
-
 
     @property
     def layer(self) -> QgsMapLayer:
@@ -247,7 +246,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.setActiveLayer(self.layer)
             self.iface.zoomToActiveLayer()
 
-    def selected_value(self) -> None:
+    def value_selected(self) -> None:
         if self.chb_go.isChecked():
             if l := self.selected_values:
                 self.apply_filter(l)
@@ -255,14 +254,16 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def apply_filter(self, list_of_values: Union[Iterable[str], Literal[True]]) -> None:
         if not self.validate_layer():
             return
-        
+
         if not list_of_values:
             # Return nothing
             filter_expression = "TRUE = FALSE"
         elif list_of_values is True or self.all_selected:
             filter_expression = ''
         else:
-            formatted_list_of_values = ', '.join(f"'{value}'" for value in list_of_values)
+            formatted_list_of_values = ', '.join(
+                f"'{value}'" for value in list_of_values
+            )
             filter_expression = f'"{self.field}" IN ({formatted_list_of_values})'
         self.layer.setSubsetString(filter_expression)
 
@@ -279,7 +280,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     @property
     def all_selected(self) -> bool:
         return all(
-            item.isSelected() for item in self.list_values.findItems("*", Qt.MatchWildcard)
+            item.isSelected()
+            for item in self.list_values.findItems('*', Qt.MatchWildcard)
         )
 
     @property
@@ -291,10 +293,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.list_values.clearSelection()
         for value in input_values:
             with contextlib.suppress(IndexError):
-                self.list_values.findItems(value, Qt.MatchExactly)[
-                    0
-                ].setSelected(True)
-        self.selected_value()
+                self.list_values.findItems(value, Qt.MatchExactly)[0].setSelected(True)
+        self.value_selected()
 
     def closeEvent(self, event) -> None:
         self.save_filter()
