@@ -11,7 +11,6 @@
 import contextlib
 import os
 import sys
-from ast import literal_eval
 from typing import Iterable, Literal, Optional, Union
 
 import qgis
