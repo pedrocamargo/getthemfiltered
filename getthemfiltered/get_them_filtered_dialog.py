@@ -77,28 +77,6 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if not fieldname:
             self.list_values.clear()
 
-    @staticmethod
-    def load_from_subset_string(
-        subset_string: str,
-    ) -> Union[tuple[str, list], tuple[None, None]]:
-        """
-        Attempt to convert an existing subset string to this tool's settings
-        """
-        #  "Jurisdiction" = 'Ashford' OR "Jurisdiction" = 'Ansonia'
-        split_selectors = subset_string.split(" OR ")
-        values = set()
-        for count, item in enumerate(split_selectors):
-            new_field, separator, value = item.partition(" = ")
-            new_field = literal_eval(new_field)
-            if count == 0:
-                field = new_field
-            elif new_field != field:
-                # If this plugin created the saved filter, there should only be one value for field
-                return None, None
-            value = literal_eval(value)
-            values.add(value)
-        return field, values
-
     def load_saved_filter(self) -> None:
         """
         Loads any saved filters from the project file
