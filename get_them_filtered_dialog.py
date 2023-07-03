@@ -53,6 +53,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.chb_zoom.toggled.connect(self.do_zooming)
         self.chb_zoom.toggled.connect(self.save_filter)
 
+        self.chb_go.clicked.connect(self.apply_filter)
+        self.chb_go.clicked.connect(self.save_filter)
+
         self.but_deselect_all.clicked.connect(self.deselect_all)
         self.but_select_all.clicked.connect(self.select_all)
 
@@ -260,11 +263,11 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.validate_layer():
             return
 
-        if not list_of_values:
+        if not self.chb_go.isChecked() or list_of_values is True or self.all_selected:
+            filter_expression = ''
+        elif not list_of_values:
             # Return nothing
             filter_expression = "TRUE = FALSE"
-        elif list_of_values is True or self.all_selected:
-            filter_expression = ''
         else:
             formatted_list_of_values = ', '.join(
                 f"'{value}'" for value in list_of_values
