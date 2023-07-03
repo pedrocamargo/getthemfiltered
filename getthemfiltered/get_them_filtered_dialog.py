@@ -39,14 +39,19 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface.projectRead.connect(self.load_saved_filter)
 
         self.rdo_single.toggled.connect(self.single_or_multi)
+        self.rdo_single.toggled.connect(self.save_filter)
         # self.rdo_multi.toggled.connect(self.single_or_multi)
 
         self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
+        self.cob_layer.layerChanged.connect(self.save_filter)
 
         self.cob_field.fieldChanged.connect(self.populate_values_list)
+        self.cob_field.fieldChanged.connect(self.save_filter)
 
         self.list_values.itemSelectionChanged.connect(self.value_selected)
+        self.list_values.itemSelectionChanged.connect(self.save_filter)
         self.chb_zoom.toggled.connect(self.do_zooming)
+        self.chb_zoom.toggled.connect(self.save_filter)
 
         self.but_deselect_all.clicked.connect(self.deselect_all)
         self.but_select_all.clicked.connect(self.select_all)
@@ -297,6 +302,5 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.value_selected()
 
     def closeEvent(self, event) -> None:
-        self.save_filter()
         self.closingPlugin.emit()
         event.accept()
