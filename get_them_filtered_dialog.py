@@ -99,10 +99,7 @@ class GetThemFilteredDialog(QtWidgets.QDialog, FORM_CLASS):
         table.clear()
 
         idx = self.layer.dataProvider().fieldNameIndex(self.field)
-        values = []
-        for feat in self.layer.getFeatures():
-            values.append(feat.attributes()[idx])
-        values = sorted([str(x) for x in set(values)])
+        values = sorted(str(value) for value in self.layer.uniqueValues(idx))
         table.addItems(values)
         self.select_all()
         # for v in set(values):
