@@ -12,25 +12,27 @@
 
 from __future__ import absolute_import
 import os.path
-from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
+from qgis.PyQt.QtCore import Qt, QSettings, QTranslator, qVersion, QCoreApplication
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtGui import QIcon
 from .get_them_filtered_dialog import GetThemFilteredDialog
 
 
-class getThemFiltered(object):
+class getThemFiltered:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
         self.icon_path = os.path.join(self.plugin_dir, 'icon.svg')
-        self.dlg = GetThemFilteredDialog(self.iface)
         self.actions = []
         self.menu = self.tr(u'&GetThemFiltered')
 
         self.toolbar = self.iface.addToolBar(u'GetThemFiltered')
         self.toolbar.setObjectName(u'GetThemFiltered')
+        
+        self.pluginIsActive = False
+        self.dockwidget = None
 
     def tr(self, message):
         """
@@ -46,13 +48,14 @@ class getThemFiltered(object):
 
         """Add a toolbar icon to the toolbar."""
         icon = QIcon(self.icon_path)
-        action = QAction(icon, self.tr(u'GetThemFiltered'), self.iface.mainWindow())
-        action.triggered.connect(self.run)
-        action.setEnabled(True)
+        self.panelAction = QAction(icon, self.tr(u'GetThemFiltered'), self.iface.mainWindow())
+        self.panelAction.triggered.connect(self.run)
+        self.panelAction.setCheckable(True)
+        self.panelAction.setEnabled(True)
 
-        self.toolbar.addAction(action)
-        self.iface.addPluginToMenu(self.menu, action)
-        self.actions.append(action)
+        self.toolbar.addAction(self.panelAction)
+        self.iface.addPluginToMenu(self.menu, self.panelAction)
+        self.actions.append(self.panelAction)
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -60,6 +63,31 @@ class getThemFiltered(object):
             self.iface.removePluginMenu(self.tr(u'&GetThemFiltered'), action)
             self.iface.removeToolBarIcon(action)
 
-    def run(self):
-        self.dlg.show()
-        self.dlg.exec_()
+    def widgetVisibilityChanged(self, visible: bool) -> None:
+        self.panelAction.setChecked(visible)
+
+    def onClosePlugin(self):
+        """Cleanup necessary items here when plugin dockwidget is closed"""
+
+        # disconnects
+        self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
+
+        self.pluginIsActive = False
+
+    def run(self, checked: bool):
+        if not self.pluginIsActive:
+            self.pluginIsActive = True
+            if self.dockwidget is None:
+                self.dockwidget = GetThemFilteredDialog(self.iface)
+            self.dockwidget.visibilityChanged.connect(self.widgetVisibilityChanged)
+
+            self.dockwidget.closingPlugin.connect(self.onClosePlugin)
+
+            self.iface.addDockWidget(
+                area=Qt.LeftDockWidgetArea,
+                dockwidget=self.dockwidget,
+            )
+            
+        # The triggered signal includes a bool 
+        # that indicates whether the button was checked or unchecked
+        self.dockwidget.setVisible(checked)
