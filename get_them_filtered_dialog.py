@@ -264,12 +264,12 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             return
 
         if not self.chb_go.isChecked() or list_of_values is True or self.all_selected:
-            filter_expression = ''
+            filter_expression = ""
         elif not list_of_values:
             # Return nothing
             filter_expression = "TRUE = FALSE"
         else:
-            formatted_list_of_values = ', '.join(
+            formatted_list_of_values = ", ".join(
                 f"'{value}'" for value in list_of_values
             )
             filter_expression = f'"{self.field}" IN ({formatted_list_of_values})'
@@ -289,7 +289,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def all_selected(self) -> bool:
         return all(
             item.isSelected()
-            for item in self.list_values.findItems('*', Qt.MatchWildcard)
+            for item in self.list_values.findItems("*", Qt.MatchWildcard)
         )
 
     @property
