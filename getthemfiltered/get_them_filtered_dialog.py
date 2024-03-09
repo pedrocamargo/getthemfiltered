@@ -244,7 +244,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
         idx = self.layer.dataProvider().fieldNameIndex(self.field)
         values = sorted(str(value) for value in self.layer.uniqueValues(idx))
-        table.addItems(values)
+        self.list_values.addItems(values)
         if self.values_loaded:
             self.select_all()
         self.values_loaded = True
