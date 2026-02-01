@@ -11,7 +11,7 @@
 import contextlib
 import os
 import sys
-from typing import Iterable, Literal, Optional, Union
+from typing import Iterable, Literal, Optional, Union, cast
 
 import qgis
 from qgis.core import QgsMapLayer, QgsProject
@@ -29,6 +29,10 @@ FORM_CLASS, _ = uic.loadUiType(
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
     plugin_id = "get_em_filtered"
+
+    @property
+    def _project(self) -> QgsProject:
+        return cast(QgsProject, QgsProject.instance())
 
     def __init__(self, iface, parent=None):
         QtWidgets.QDockWidget.__init__(self, None, Qt.WindowStaysOnTopHint)
@@ -121,7 +125,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def layer_saved(self) -> Optional[QgsMapLayer]:
-        proj = QgsProject.instance()
+        proj = self._project
         layer_id, type_conversion_ok = proj.readEntry(
             self.plugin_id,
             "layer",
@@ -130,7 +134,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @layer_saved.setter
     def layer_saved(self, layer: QgsMapLayer) -> None:
-        QgsProject.instance().writeEntry(
+        self._project.writeEntry(
             self.plugin_id,
             "layer",
             layer.id(),
@@ -138,7 +142,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def field_saved(self) -> str:
-        loaded_field, type_conversion_ok = QgsProject.instance().readEntry(
+        loaded_field, type_conversion_ok = self._project.readEntry(
             self.plugin_id,
             "field",
             "",
@@ -147,7 +151,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @field_saved.setter
     def field_saved(self, field: str) -> None:
-        QgsProject.instance().writeEntry(
+        self._project.writeEntry(
             self.plugin_id,
             "field",
             field,
@@ -155,7 +159,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def values_saved(self) -> set[str]:
-        loaded_values, type_conversion_ok = QgsProject.instance().readListEntry(
+        loaded_values, type_conversion_ok = self._project.readListEntry(
             self.plugin_id,
             "values",
         )
@@ -163,18 +167,18 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @values_saved.setter
     def values_saved(self, values: Iterable[str]) -> None:
-        QgsProject.instance().writeEntry(self.plugin_id, "values", list(values))
+        self._project.writeEntry(self.plugin_id, "values", list(values))
 
     @property
     def filtering_saved(self) -> bool:
-        filtering_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
+        filtering_enabled, type_conversion_ok = self._project.readBoolEntry(
             self.plugin_id, "filtering_enabled"
         )
         return filtering_enabled
 
     @filtering_saved.setter
     def filtering_saved(self, value: bool) -> None:
-        QgsProject.instance().writeEntryBool(
+        self._project.writeEntryBool(
             self.plugin_id,
             "filtering_enabled",
             value,
@@ -182,14 +186,14 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def zoom_saved(self) -> bool:
-        zoom_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
+        zoom_enabled, type_conversion_ok = self._project.readBoolEntry(
             self.plugin_id, "zoom_to_results"
         )
         return zoom_enabled
 
     @zoom_saved.setter
     def zoom_saved(self, value: bool) -> None:
-        QgsProject.instance().writeEntryBool(
+        self._project.writeEntryBool(
             self.plugin_id,
             "zoom_to_results",
             value,
@@ -197,14 +201,14 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def single_or_multi_saved(self) -> bool:
-        single_enabled, type_conversion_ok = QgsProject.instance().readBoolEntry(
+        single_enabled, type_conversion_ok = self._project.readBoolEntry(
             self.plugin_id, "single_select"
         )
         return single_enabled
 
     @single_or_multi_saved.setter
     def single_or_multi_saved(self, value: bool) -> None:
-        QgsProject.instance().writeEntryBool(
+        self._project.writeEntryBool(
             self.plugin_id,
             "single_select",
             value,
@@ -227,7 +231,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if self.layer is None:
             self.list_values.clear()
             return False
-        if self.layer not in QgsProject.instance().mapLayers().values():
+        if self.layer not in self._project.mapLayers().values():
             self.list_values.clear()
             return False
         return isinstance(self.layer, qgis.core.QgsVectorLayer)
