@@ -87,19 +87,37 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Loads any saved filters from the project file
         """
-        if self.filtering_saved:
-            self.chb_go.setChecked(True)
-        if self.zoom_saved:
-            self.chb_zoom.setChecked(True)
-        if self.single_or_multi_saved:
-            self.rdo_single.setChecked(True)
-        if self.layer_saved:
-            self.layer = self.layer_saved
-            if loaded_field := self.field_saved:
-                self.field = loaded_field
-                self.changed_field()
-                self.populate_values_list()
-                self.selected_values = self.values_saved
+
+        # Disconnect signals so they don't fire as we're loading
+        save_connections = (
+            (self.rdo_single.toggled, self.save_filter),
+            (self.cob_layer.layerChanged, self.save_filter),
+            (self.cob_field.fieldChanged, self.save_filter),
+            (self.list_values.itemSelectionChanged, self.save_filter),
+            (self.chb_zoom.toggled, self.save_filter),
+            (self.chb_go.clicked, self.save_filter),
+        )
+        for signal, slot in save_connections:
+            signal.disconnect(slot)
+
+        # Now load settings
+        try:
+            if self.filtering_saved:
+                self.chb_go.setChecked(True)
+            if self.zoom_saved:
+                self.chb_zoom.setChecked(True)
+            if self.single_or_multi_saved:
+                self.rdo_single.setChecked(True)
+            if self.layer_saved:
+                self.layer = self.layer_saved
+                if loaded_field := self.field_saved:
+                    self.field = loaded_field
+                    self.populate_values_list()
+                    self.selected_values = self.values_saved
+        finally:
+            # Reconnect signals so user interaction triggers save
+            for signal, slot in save_connections:
+                signal.connect(slot)
 
     @property
     def layer_saved(self) -> Optional[QgsMapLayer]:
@@ -196,6 +214,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Saves the current filter settings to the project file
         """
+        if not self.layer:
+            return
         self.layer_saved = self.layer
         self.field_saved = self.field
         self.values_saved = self.selected_values
