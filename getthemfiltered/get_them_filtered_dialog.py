@@ -40,7 +40,15 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
 
-        self.iface.projectRead.connect(self.load_saved_filter)
+        # While QGIS clears or reads a project, the combo boxes fire change
+        # signals as layers go away or are loaded. Those must not be saved, or
+        # they overwrite the settings just read from the project file. Likewise
+        # during setup here, until load_saved_filter() has run.
+        self._loading_project = True
+        self._project.aboutToBeCleared.connect(self._pause_saving)
+        self._project.cleared.connect(self._resume_saving)
+        self._project.loadingLayer.connect(self._pause_saving)
+        self._project.readProject.connect(self.load_saved_filter)
 
         self.rdo_single.toggled.connect(self.single_or_multi)
         self.rdo_single.toggled.connect(self.save_filter)
@@ -87,24 +95,18 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if not fieldname:
             self.list_values.clear()
 
+    def _pause_saving(self) -> None:
+        self._loading_project = True
+
+    def _resume_saving(self) -> None:
+        self._loading_project = False
+
     def load_saved_filter(self) -> None:
         """
         Loads any saved filters from the project file
         """
-
-        # Disconnect signals so they don't fire as we're loading
-        save_connections = (
-            (self.rdo_single.toggled, self.save_filter),
-            (self.cob_layer.layerChanged, self.save_filter),
-            (self.cob_field.fieldChanged, self.save_filter),
-            (self.list_values.itemSelectionChanged, self.save_filter),
-            (self.chb_zoom.toggled, self.save_filter),
-            (self.chb_go.clicked, self.save_filter),
-        )
-        for signal, slot in save_connections:
-            signal.disconnect(slot)
-
-        # Now load settings
+        # Don't save the intermediate states while applying the loaded settings
+        self._pause_saving()
         try:
             if self.filtering_saved:
                 self.chb_go.setChecked(True)
@@ -119,9 +121,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
                     self.populate_values_list()
                     self.selected_values = self.values_saved
         finally:
-            # Reconnect signals so user interaction triggers save
-            for signal, slot in save_connections:
-                signal.connect(slot)
+            self._resume_saving()
 
     @property
     def layer_saved(self) -> Optional[QgsMapLayer]:
@@ -218,7 +218,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Saves the current filter settings to the project file
         """
-        if not self.layer:
+        if self._loading_project or not self.layer:
             return
         self.layer_saved = self.layer
         self.field_saved = self.field
