@@ -313,7 +313,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def all_selected(self) -> bool:
         return all(
             item.isSelected()
-            for item in self.list_values.findItems("*", Qt.MatchWildcard)
+            for item in self.list_values.findItems("*", Qt.MatchFlag.MatchWildcard)
         )
 
     @property
@@ -325,7 +325,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.list_values.clearSelection()
         for value in input_values:
             with contextlib.suppress(IndexError):
-                self.list_values.findItems(value, Qt.MatchExactly)[0].setSelected(True)
+                self.list_values.findItems(value, Qt.MatchFlag.MatchExactly)[0].setSelected(True)
         self.value_selected()
 
     def closeEvent(self, event) -> None:
