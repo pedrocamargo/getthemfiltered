@@ -264,6 +264,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             self.layer.setSubsetString("")
 
     def populate_values_list(self) -> None:
+        # List values from the whole layer, not just what the last filter left
+        self.reset_filter()
         self.list_values.clear()
 
         idx = self.layer.dataProvider().fieldNameIndex(self.field)
