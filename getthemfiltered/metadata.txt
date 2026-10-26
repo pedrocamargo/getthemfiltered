@@ -4,7 +4,7 @@ qgisMinimumVersion=3.4
 qgisMaximumVersion=4.99
 description=Quickly filter a given layer by the unique values from a field.
 about=Recursively filter a given layer by its values.
-version=0.2.0
+version=0.3.0
 author=Pedro Camargo, Evan Derickson
 email=c@margo.co
 hasProcessingProvider=no
@@ -34,4 +34,3 @@ experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
-
