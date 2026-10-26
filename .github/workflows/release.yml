@@ -58,16 +58,30 @@ jobs:
 
       - name: Release plugin in QGIS
         if: ${{ (github.event_name == 'release')}}
-        run: >-
-          if [ -n "${{ secrets.QGIS_PLUGIN_REPO_USER }}" ] && [ -n "${{ secrets.QGIS_PLUGIN_REPO_PASSWORD }}" ]; then
+        env:
+          QGIS_TOKEN: ${{ secrets.QGIS_TOKEN || secrets.QGIS_PLUGIN_REPO_TOKEN }}
+          OSGEO_USER: ${{ secrets.QGIS_PLUGIN_REPO_USER }}
+          OSGEO_PASS: ${{ secrets.QGIS_PLUGIN_REPO_PASSWORD }}
+        run: |
+          if [ -n "$QGIS_TOKEN" ]; then
+            echo "Publishing to QGIS plugin store using QGIS Token..."
             qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
               --release-tag ${{ github.event.release.tag_name }} \
               --github-token ${{ secrets.GITHUB_TOKEN }} \
               -r \
               -c \
-              --osgeo-username "${{ secrets.QGIS_PLUGIN_REPO_USER }}" \
-              --osgeo-password "${{ secrets.QGIS_PLUGIN_REPO_PASSWORD }}"
+              --qgis-token "$QGIS_TOKEN"
+          elif [ -n "$OSGEO_USER" ] && [ -n "$OSGEO_PASS" ]; then
+            echo "Publishing to QGIS plugin store using OSGeo credentials..."
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
+              --release-tag ${{ github.event.release.tag_name }} \
+              --github-token ${{ secrets.GITHUB_TOKEN }} \
+              -r \
+              -c \
+              --osgeo-username "$OSGEO_USER" \
+              --osgeo-password "$OSGEO_PASS"
           else
+            echo "Publishing to GitHub Releases only (no QGIS store token provided)..."
             qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
               --release-tag ${{ github.event.release.tag_name }} \
               --github-token ${{ secrets.GITHUB_TOKEN }} \
