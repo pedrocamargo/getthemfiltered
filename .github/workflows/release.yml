@@ -46,7 +46,7 @@ jobs:
 
       - name: Build the package
         if: ${{ (github.event_name != 'release')}}
-        run: qgis-plugin-ci --no-validation package ${{ env.PLUGIN_VERSION }} -c
+        run: qgis-plugin-ci package ${{ env.PLUGIN_VERSION }} -c
 
       - name: Upload artifact
         if: ${{ (github.event_name != 'release')}}
@@ -65,7 +65,7 @@ jobs:
         run: |
           if [ -n "$QGIS_TOKEN" ]; then
             echo "Publishing to QGIS plugin store using QGIS Token..."
-            qgis-plugin-ci --no-validation release ${{ env.PLUGIN_VERSION }} \
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
               --release-tag ${{ github.event.release.tag_name }} \
               --github-token ${{ secrets.GITHUB_TOKEN }} \
               -r \
@@ -73,7 +73,7 @@ jobs:
               --qgis-token "$QGIS_TOKEN"
           elif [ -n "$OSGEO_USER" ] && [ -n "$OSGEO_PASS" ]; then
             echo "Publishing to QGIS plugin store using OSGeo credentials..."
-            qgis-plugin-ci --no-validation release ${{ env.PLUGIN_VERSION }} \
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
               --release-tag ${{ github.event.release.tag_name }} \
               --github-token ${{ secrets.GITHUB_TOKEN }} \
               -r \
@@ -82,7 +82,7 @@ jobs:
               --osgeo-password "$OSGEO_PASS"
           else
             echo "Publishing to GitHub Releases only (no QGIS store token provided)..."
-            qgis-plugin-ci --no-validation release ${{ env.PLUGIN_VERSION }} \
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
               --release-tag ${{ github.event.release.tag_name }} \
               --github-token ${{ secrets.GITHUB_TOKEN }} \
               -r \
