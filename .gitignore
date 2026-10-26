@@ -1,3 +1,22 @@
-.vscode/
-.env
+# Python / IDE
 __pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.venv*/
+.vscode/
+.idea/
+uv.lock
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+test/.qgis-settings
+log.jsonl
+
+# Ruff
+.ruff_cache/
+
+# qgis-plugin-ci packaging
+*.zip
+plugins.xml
