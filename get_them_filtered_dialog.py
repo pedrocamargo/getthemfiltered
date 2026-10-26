@@ -34,7 +34,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
 
     def __init__(self, iface, parent=None):
-        QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
+        QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowType.WindowStaysOnTopHint)
 
         self.setupUi(self)
         self.iface = iface
@@ -72,9 +72,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def single_or_multi(self):
         if self.rdo_single.isChecked():
             self.deselect_all()
-            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         else:
-            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
 
     def add_fields_to_cboxes(self):
         self.reset_filter()
