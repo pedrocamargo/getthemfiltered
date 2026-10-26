@@ -17,7 +17,7 @@ server=True
 
 # Uncomment the following line and add your changelog:
 # changelog=
-  Version 0.2.1
+  Version 0.3.0
   * support for QGIS 4
   Version 0.1.2
   * First version
