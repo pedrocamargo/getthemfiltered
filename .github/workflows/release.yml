@@ -1,0 +1,90 @@
+name: VersionRelease
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: 3.12
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt install qttools5-dev-tools
+          python -m pip install -U pip qgis-plugin-ci
+
+      - name: Get plugin version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            OUTPUT="${TAG#v}"
+          else
+            OUTPUT=$(python getthemfiltered/get_version.py)
+          fi
+          echo "PLUGIN_VERSION=$OUTPUT" >> $GITHUB_ENV
+          echo "FILE_PATH=${{ github.workspace }}/getthemfiltered.$OUTPUT.zip" >> $GITHUB_ENV
+
+      - name: Build the package
+        if: ${{ (github.event_name != 'release')}}
+        run: qgis-plugin-ci package ${{ env.PLUGIN_VERSION }} -c
+
+      - name: Upload artifact
+        if: ${{ (github.event_name != 'release')}}
+        uses: actions/upload-artifact@v7
+        with:
+          name: getthemfiltered
+          path: ${{ env.FILE_PATH }}
+          if-no-files-found: warn
+
+      - name: Release plugin in QGIS
+        if: ${{ (github.event_name == 'release')}}
+        env:
+          QGIS_TOKEN: ${{ secrets.QGIS_TOKEN || secrets.QGIS_PLUGIN_REPO_TOKEN }}
+          OSGEO_USER: ${{ secrets.QGIS_PLUGIN_REPO_USER }}
+          OSGEO_PASS: ${{ secrets.QGIS_PLUGIN_REPO_PASSWORD }}
+        run: |
+          if [ -n "$QGIS_TOKEN" ]; then
+            echo "Publishing to QGIS plugin store using QGIS Token..."
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
+              --release-tag ${{ github.event.release.tag_name }} \
+              --github-token ${{ secrets.GITHUB_TOKEN }} \
+              -r \
+              -c \
+              --qgis-token "$QGIS_TOKEN"
+          elif [ -n "$OSGEO_USER" ] && [ -n "$OSGEO_PASS" ]; then
+            echo "Publishing to QGIS plugin store using OSGeo credentials..."
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
+              --release-tag ${{ github.event.release.tag_name }} \
+              --github-token ${{ secrets.GITHUB_TOKEN }} \
+              -r \
+              -c \
+              --osgeo-username "$OSGEO_USER" \
+              --osgeo-password "$OSGEO_PASS"
+          else
+            echo "Publishing to GitHub Releases only (no QGIS store token provided)..."
+            qgis-plugin-ci release ${{ env.PLUGIN_VERSION }} \
+              --release-tag ${{ github.event.release.tag_name }} \
+              --github-token ${{ secrets.GITHUB_TOKEN }} \
+              -r \
+              -c
+          fi

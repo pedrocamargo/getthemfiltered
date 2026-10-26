@@ -1,0 +1,6 @@
+pytest-qgis
+pytest-qt
+pytest-cov
+pytest-mock
+ruff==0.16.2
+pytest-reportlog

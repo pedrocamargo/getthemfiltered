@@ -15,4 +15,5 @@
 # noinspection PyDocstring,PyPep8Naming
 def classFactory(iface):
     from .getthemfiltered import getThemFiltered
+
     return getThemFiltered(iface)

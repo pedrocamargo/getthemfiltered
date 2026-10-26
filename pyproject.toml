@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+
+[tool.qgis-plugin-ci]
+plugin_path = "getthemfiltered"
+github_organization_slug = "pedrocamargo"
+project_slug = "getthemfiltered"
+changelog_include = false
+
+[tool.coverage.run]
+omit = []
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# Ruff 0.16 grew its default rule set from 59 to 413 rules. Pinned to the pre-0.16 default
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E203", "E266", "E501"]

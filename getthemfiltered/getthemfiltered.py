@@ -10,9 +10,8 @@
  ***************************************************************************/
 """
 
-from __future__ import absolute_import
 import os.path
-from qgis.PyQt.QtCore import Qt, QSettings, QTranslator, qVersion, QCoreApplication
+from qgis.PyQt.QtCore import Qt, QCoreApplication
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtGui import QIcon
 from .get_them_filtered_dialog import GetThemFilteredDialog
@@ -24,13 +23,13 @@ class getThemFiltered:
     def __init__(self, iface):
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
-        self.icon_path = os.path.join(self.plugin_dir, 'icon.svg')
+        self.icon_path = os.path.join(self.plugin_dir, "icon.svg")
         self.actions = []
-        self.menu = self.tr(u'&GetThemFiltered')
+        self.menu = self.tr("&GetThemFiltered")
 
-        self.toolbar = self.iface.addToolBar(u'GetThemFiltered')
-        self.toolbar.setObjectName(u'GetThemFiltered')
-        
+        self.toolbar = self.iface.addToolBar("GetThemFiltered")
+        self.toolbar.setObjectName("GetThemFiltered")
+
         self.pluginIsActive = False
         self.dockwidget = None
 
@@ -40,7 +39,7 @@ class getThemFiltered:
         We implement this ourselves since we do not inherit QObject.
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('GetThemFiltered', message)
+        return QCoreApplication.translate("GetThemFiltered", message)
 
     # noinspection PyPep8Naming
     def initGui(self):
@@ -48,7 +47,7 @@ class getThemFiltered:
 
         """Add a toolbar icon to the toolbar."""
         icon = QIcon(self.icon_path)
-        self.panelAction = QAction(icon, self.tr(u'GetThemFiltered'), self.iface.mainWindow())
+        self.panelAction = QAction(icon, self.tr("GetThemFiltered"), self.iface.mainWindow())
         self.panelAction.triggered.connect(self.run)
         self.panelAction.setCheckable(True)
         self.panelAction.setEnabled(True)
@@ -60,7 +59,7 @@ class getThemFiltered:
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginMenu(self.tr(u'&GetThemFiltered'), action)
+            self.iface.removePluginMenu(self.tr("&GetThemFiltered"), action)
             self.iface.removeToolBarIcon(action)
 
     def widgetVisibilityChanged(self, visible: bool) -> None:
@@ -84,10 +83,10 @@ class getThemFiltered:
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
 
             self.iface.addDockWidget(
-                area=Qt.DockWidgetArea.LeftDockWidgetArea,
-                dockwidget=self.dockwidget,
+                Qt.DockWidgetArea.LeftDockWidgetArea,
+                self.dockwidget,
             )
-            
-        # The triggered signal includes a bool 
+
+        # The triggered signal includes a bool
         # that indicates whether the button was checked or unchecked
         self.dockwidget.setVisible(checked)

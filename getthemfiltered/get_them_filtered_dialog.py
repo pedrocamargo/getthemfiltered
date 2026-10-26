@@ -7,13 +7,13 @@
         email                : c@margo.co
 
 """
+
 import os
 import sys
 
 import qgis
-from qgis.PyQt import QtWidgets, uic, QtGui, QtCore, QtWidgets
-from qgis.PyQt.QtWidgets import *
 from qgis.core import QgsProject
+from qgis.PyQt import QtCore, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 
 
@@ -21,16 +21,14 @@ sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
 
 try:
-    from qgis.core import QgsMapLayerRegistry
+    from qgis.core import QgsMapLayerRegistry  # noqa: F401
 except ImportError:
     pass
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'forms/ui_filter.ui'))
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), "forms/ui_filter.ui"))
 
 
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
-
     closingPlugin = pyqtSignal()
 
     def __init__(self, iface, parent=None):
@@ -118,18 +116,18 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def selected_value(self):
         if self.chb_go.isChecked():
-            l = [i.text() for i in self.list_values.selectedItems()]
-            if l:
-                self.apply_filter(l)
+            selected_items = [i.text() for i in self.list_values.selectedItems()]
+            if selected_items:
+                self.apply_filter(selected_items)
 
     def apply_filter(self, list_of_values):
         if not self.check_layer():
             return
 
-        filter_expression = '"{}" = \'{}\''.format(self.field, list_of_values[0])
+        filter_expression = "\"{}\" = '{}'".format(self.field, list_of_values[0])
         if len(list_of_values) > 1:
             for i in list_of_values[1:]:
-                filter_expression = filter_expression + ' OR "{}" = \'{}\''.format(self.field, i)
+                filter_expression = filter_expression + " OR \"{}\" = '{}'".format(self.field, i)
         self.layer.setSubsetString(filter_expression)
 
         self.do_zooming()
