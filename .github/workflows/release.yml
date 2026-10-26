@@ -37,7 +37,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
-            OUTPUT="${TAG#v}"
+            OUTPUT=$(python -c "import re, sys; m = re.search(r'(\d+(\.\d+)+.*)', sys.argv[1]); print(m.group(1) if m else sys.argv[1].lstrip('vV'))" "$TAG")
           else
             OUTPUT=$(python getthemfiltered/get_version.py)
           fi
