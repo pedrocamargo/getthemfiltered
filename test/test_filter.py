@@ -15,10 +15,20 @@ def create_test_layer():
     """Create a temporary in-memory vector layer with sample data."""
     layer = QgsVectorLayer("Point?crs=EPSG:4326", "test_layer", "memory")
     provider = layer.dataProvider()
+
+    try:
+        from qgis.PyQt.QtCore import QMetaType
+
+        type_int = QMetaType.Type.Int
+        type_str = QMetaType.Type.QString
+    except (ImportError, AttributeError):
+        type_int = QtCore.QVariant.Int
+        type_str = QtCore.QVariant.String
+
     provider.addAttributes(
         [
-            QgsField("id", QtCore.QVariant.Int),
-            QgsField("category", QtCore.QVariant.String),
+            QgsField("id", type_int),
+            QgsField("category", type_str),
         ]
     )
     layer.updateFields()

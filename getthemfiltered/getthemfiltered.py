@@ -83,8 +83,8 @@ class getThemFiltered:
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
 
             self.iface.addDockWidget(
-                area=Qt.DockWidgetArea.LeftDockWidgetArea,
-                dockwidget=self.dockwidget,
+                Qt.DockWidgetArea.LeftDockWidgetArea,
+                self.dockwidget,
             )
 
         # The triggered signal includes a bool
