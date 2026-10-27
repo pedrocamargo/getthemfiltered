@@ -21,9 +21,7 @@ from qgis.PyQt.QtCore import Qt, pyqtSignal
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
 
-FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), "forms/ui_filter.ui")
-)
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), "forms/ui_filter.ui"))
 
 
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
@@ -171,9 +169,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def filtering_saved(self) -> bool:
-        filtering_enabled, type_conversion_ok = self._project.readBoolEntry(
-            self.plugin_id, "filtering_enabled"
-        )
+        filtering_enabled, type_conversion_ok = self._project.readBoolEntry(self.plugin_id, "filtering_enabled")
         return filtering_enabled
 
     @filtering_saved.setter
@@ -186,9 +182,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def zoom_saved(self) -> bool:
-        zoom_enabled, type_conversion_ok = self._project.readBoolEntry(
-            self.plugin_id, "zoom_to_results"
-        )
+        zoom_enabled, type_conversion_ok = self._project.readBoolEntry(self.plugin_id, "zoom_to_results")
         return zoom_enabled
 
     @zoom_saved.setter
@@ -201,9 +195,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def single_or_multi_saved(self) -> bool:
-        single_enabled, type_conversion_ok = self._project.readBoolEntry(
-            self.plugin_id, "single_select"
-        )
+        single_enabled, type_conversion_ok = self._project.readBoolEntry(self.plugin_id, "single_select")
         return single_enabled
 
     @single_or_multi_saved.setter
@@ -239,13 +231,9 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     def single_or_multi(self) -> None:
         if self.rdo_single.isChecked():
             self.deselect_all()
-            self.list_values.setSelectionMode(
-                QtWidgets.QAbstractItemView.SelectionMode.SingleSelection
-            )
+            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         else:
-            self.list_values.setSelectionMode(
-                QtWidgets.QAbstractItemView.SelectionMode.MultiSelection
-            )
+            self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
 
     def add_fields_to_cboxes(self) -> None:
         self.reset_filter()
@@ -282,8 +270,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def value_selected(self) -> None:
         if self.chb_go.isChecked():
-            if l := self.selected_values:
-                self.apply_filter(l)
+            if values := self.selected_values:
+                self.apply_filter(values)
 
     def apply_filter(self, list_of_values: Union[Iterable[str], Literal[True]]) -> None:
         if not self.validate_layer():
@@ -295,9 +283,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             # Return nothing
             filter_expression = "TRUE = FALSE"
         else:
-            formatted_list_of_values = ", ".join(
-                f"'{value}'" for value in list_of_values
-            )
+            formatted_list_of_values = ", ".join(f"'{value}'" for value in list_of_values)
             filter_expression = f'"{self.field}" IN ({formatted_list_of_values})'
         self.layer.setSubsetString(filter_expression)
 
@@ -313,10 +299,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def all_selected(self) -> bool:
-        return all(
-            item.isSelected()
-            for item in self.list_values.findItems("*", Qt.MatchFlag.MatchWildcard)
-        )
+        return all(item.isSelected() for item in self.list_values.findItems("*", Qt.MatchFlag.MatchWildcard))
 
     @property
     def selected_values(self) -> list[str]:

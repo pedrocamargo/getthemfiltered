@@ -71,8 +71,9 @@ def test_filter_dialog_workflow(qgis_iface):
     assert dialog.list_values.selectionMode() == QtWidgets.QAbstractItemView.SelectionMode.SingleSelection
 
     # Test filtering single value
+    dialog.chb_go.setChecked(True)
     dialog.apply_filter(["A"])
-    assert layer.subsetString() == "\"category\" = 'A'"
+    assert layer.subsetString() == "\"category\" IN ('A')"
 
     # Test multi selection mode
     dialog.rdo_multi.setChecked(True)
@@ -81,7 +82,7 @@ def test_filter_dialog_workflow(qgis_iface):
 
     # Test filtering multiple values
     dialog.apply_filter(["A", "B"])
-    assert layer.subsetString() == "\"category\" = 'A' OR \"category\" = 'B'"
+    assert layer.subsetString() == "\"category\" IN ('A', 'B')"
 
     # Test select all and deselect all
     dialog.select_all()
