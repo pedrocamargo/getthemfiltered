@@ -95,6 +95,15 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if not fieldname:
             self.list_values.clear()
 
+    def disconnect_project(self) -> None:
+        """
+        Stops reacting to the project, e.g. when the plugin is unloaded, so a leftover dialog can't change it
+        """
+        self._project.aboutToBeCleared.disconnect(self._pause_saving)
+        self._project.cleared.disconnect(self._resume_saving)
+        self._project.loadingLayer.disconnect(self._pause_saving)
+        self._project.readProject.disconnect(self.load_saved_filter)
+
     def _pause_saving(self) -> None:
         self._loading_project = True
 
