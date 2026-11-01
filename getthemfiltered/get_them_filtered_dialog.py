@@ -297,8 +297,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.chb_go.isChecked() or list_of_values is True or self.all_selected:
             filter_expression = ""
         elif not list_of_values:
-            # Return nothing
-            filter_expression = "TRUE = FALSE"
+            # Return nothing. Not TRUE or FALSE, which OGR's SQL dialect (e.g. GeoJSON, shapefiles) doesn't know
+            filter_expression = "1 = 0"
         else:
             formatted_list_of_values = ", ".join(f"'{value}'" for value in list_of_values)
             filter_expression = f'"{self.field}" IN ({formatted_list_of_values})'

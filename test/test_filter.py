@@ -1,9 +1,12 @@
+import pytest
 from qgis.core import (
+    QgsCoordinateTransformContext,
     QgsFeature,
     QgsField,
     QgsGeometry,
     QgsPointXY,
     QgsProject,
+    QgsVectorFileWriter,
     QgsVectorLayer,
 )
 from qgis.PyQt import QtCore, QtWidgets, sip
@@ -138,6 +141,29 @@ def test_unchecking_do_filtering_removes_filter(qgis_iface):
     dialog.chb_go.click()
     assert layer.subsetString() == ""
     assert layer.featureCount() == 5
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+@pytest.mark.parametrize("driver, extension", [("GeoJSON", "geojson"), ("ESRI Shapefile", "shp"), ("GPKG", "gpkg")])
+def test_deselect_all_shows_nothing_in_file_layers(qgis_iface, tmp_path, driver, extension):
+    """The OGR provider passes the filter to the file's SQL dialect, which may not know TRUE or FALSE."""
+    path = str(tmp_path / f"test_layer.{extension}")
+    options = QgsVectorFileWriter.SaveVectorOptions()
+    options.driverName = driver
+    error, *_ = QgsVectorFileWriter.writeAsVectorFormatV3(
+        create_test_layer(), path, QgsCoordinateTransformContext(), options
+    )
+    assert error == QgsVectorFileWriter.WriterError.NoError
+    layer = QgsVectorLayer(path, "test_layer", "ogr")
+    assert layer.isValid()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+
+    dialog.chb_go.click()
+    dialog.deselect_all()
+    assert layer.subsetString() != ""
+    assert layer.featureCount() == 0
 
     sip.delete(dialog)
     QgsProject.instance().removeMapLayer(layer.id())
