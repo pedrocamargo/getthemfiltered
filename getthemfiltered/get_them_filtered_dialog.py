@@ -13,7 +13,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from typing import Iterable, Literal, Optional, Union, cast
+from typing import Collection, Iterable, Literal, Optional, Union, cast
 
 import qgis
 from qgis.core import QgsMapLayer, QgsProject
@@ -277,7 +277,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             if values:
                 self.apply_filter(values)
 
-    def apply_filter(self, list_of_values: Union[Iterable[str], Literal[True]]) -> None:
+    def apply_filter(self, list_of_values: Union[Collection[str], Literal[True]]) -> None:
         if not self.validate_layer():
             return
 
