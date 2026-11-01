@@ -6,7 +6,7 @@ from qgis.core import (
     QgsProject,
     QgsVectorLayer,
 )
-from qgis.PyQt import QtCore, QtWidgets
+from qgis.PyQt import QtCore, QtWidgets, sip
 
 from getthemfiltered.get_them_filtered_dialog import GetThemFilteredDialog
 
@@ -96,4 +96,48 @@ def test_filter_dialog_workflow(qgis_iface):
     assert layer.subsetString() == ""
 
     # Clean up project
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+def make_filtering_dialog(qgis_iface, layer):
+    # Earlier tests leave their settings in the shared project, and a new dialog loads them
+    QgsProject.instance().clear()
+    QgsProject.instance().addMapLayer(layer)
+    dialog = GetThemFilteredDialog(qgis_iface)
+    dialog.cob_layer.setLayer(layer)
+    dialog.cob_field.setField("category")
+    dialog.rdo_multi.setChecked(True)
+    return dialog
+
+
+def test_checking_do_filtering_applies_selection(qgis_iface):
+    layer = create_test_layer()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+
+    dialog.list_values.clearSelection()
+    dialog.list_values.findItems("A", QtCore.Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+    assert layer.featureCount() == 5
+
+    dialog.chb_go.click()
+    assert layer.subsetString() == "\"category\" IN ('A')"
+    assert layer.featureCount() == 2
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+def test_unchecking_do_filtering_removes_filter(qgis_iface):
+    layer = create_test_layer()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+
+    dialog.chb_go.click()
+    dialog.list_values.clearSelection()
+    dialog.list_values.findItems("A", QtCore.Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+    assert layer.featureCount() == 2
+
+    dialog.chb_go.click()
+    assert layer.subsetString() == ""
+    assert layer.featureCount() == 5
+
+    sip.delete(dialog)
     QgsProject.instance().removeMapLayer(layer.id())

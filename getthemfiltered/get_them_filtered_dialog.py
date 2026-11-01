@@ -65,7 +65,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         self.chb_zoom.toggled.connect(self.do_zooming)
         self.chb_zoom.toggled.connect(self.save_filter)
 
-        self.chb_go.clicked.connect(self.apply_filter)
+        self.chb_go.clicked.connect(self.filtering_toggled)
         self.chb_go.clicked.connect(self.save_filter)
 
         self.but_deselect_all.clicked.connect(self.deselect_all)
@@ -270,6 +270,10 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if self.chb_zoom.isChecked():
             self.iface.setActiveLayer(self.layer)
             self.iface.zoomToActiveLayer()
+
+    def filtering_toggled(self) -> None:
+        # apply_filter() removes the filter when filtering is off
+        self.apply_filter(self.selected_values)
 
     def value_selected(self) -> None:
         if self.chb_go.isChecked():
