@@ -8,6 +8,8 @@
 
 """
 
+from __future__ import annotations
+
 import contextlib
 import os
 import sys
@@ -26,7 +28,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), "forms/ui
 
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
-    plugin_id = "get_em_filtered"
+    plugin_id = "getthemfiltered"
 
     @property
     def _project(self) -> QgsProject:
@@ -114,7 +116,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
                 self.rdo_single.setChecked(True)
             if self.layer_saved:
                 self.layer = self.layer_saved
-                if loaded_field := self.field_saved:
+                loaded_field = self.field_saved
+                if loaded_field:
                     self.field = loaded_field
                     self.populate_values_list()
                     self.selected_values = self.values_saved
@@ -270,7 +273,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     def value_selected(self) -> None:
         if self.chb_go.isChecked():
-            if values := self.selected_values:
+            values = self.selected_values
+            if values:
                 self.apply_filter(values)
 
     def apply_filter(self, list_of_values: Union[Iterable[str], Literal[True]]) -> None:
