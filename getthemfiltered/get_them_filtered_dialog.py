@@ -13,12 +13,17 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from typing import Collection, Iterable, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Collection, Iterable, Optional, Union, cast
 
 import qgis
 from qgis.core import QgsMapLayer, QgsProject
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import Qt, pyqtSignal
+
+if TYPE_CHECKING:
+    # Only for annotations, which aren't evaluated at runtime. typing.Literal needs Python 3.8, newer than
+    # some QGIS 3 releases ship
+    from typing import Literal
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
