@@ -36,7 +36,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     plugin_id = "getthemfiltered"
 
     @property
-    def _project(self) -> QgsProject:
+    def project(self) -> QgsProject:
         return cast(QgsProject, QgsProject.instance())
 
     def __init__(self, iface, parent=None):
@@ -49,11 +49,11 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         # signals as layers go away or are loaded. Those must not be saved, or
         # they overwrite the settings just read from the project file. Likewise
         # during setup here, until load_saved_filter() has run.
-        self._loading_project = True
-        self._project.aboutToBeCleared.connect(self._pause_saving)
-        self._project.cleared.connect(self._resume_saving)
-        self._project.loadingLayer.connect(self._pause_saving)
-        self._project.readProject.connect(self.load_saved_filter)
+        self.loading_project = True
+        self.project.aboutToBeCleared.connect(self.pause_saving)
+        self.project.cleared.connect(self.resume_saving)
+        self.project.loadingLayer.connect(self.pause_saving)
+        self.project.readProject.connect(self.load_saved_filter)
 
         self.rdo_single.toggled.connect(self.single_or_multi)
         self.rdo_single.toggled.connect(self.save_filter)
@@ -106,23 +106,23 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Stops reacting to the project, e.g. when the plugin is unloaded, so a leftover dialog can't change it
         """
-        self._project.aboutToBeCleared.disconnect(self._pause_saving)
-        self._project.cleared.disconnect(self._resume_saving)
-        self._project.loadingLayer.disconnect(self._pause_saving)
-        self._project.readProject.disconnect(self.load_saved_filter)
+        self.project.aboutToBeCleared.disconnect(self.pause_saving)
+        self.project.cleared.disconnect(self.resume_saving)
+        self.project.loadingLayer.disconnect(self.pause_saving)
+        self.project.readProject.disconnect(self.load_saved_filter)
 
-    def _pause_saving(self) -> None:
-        self._loading_project = True
+    def pause_saving(self) -> None:
+        self.loading_project = True
 
-    def _resume_saving(self) -> None:
-        self._loading_project = False
+    def resume_saving(self) -> None:
+        self.loading_project = False
 
     def load_saved_filter(self) -> None:
         """
         Loads any saved filters from the project file
         """
         # Don't save the intermediate states while applying the loaded settings
-        self._pause_saving()
+        self.pause_saving()
         try:
             # Set these whether on or off: the dock outlives a project, so it may still show the previous
             # project's settings. A project without saved settings reads them all as off, the dock's defaults.
@@ -140,11 +140,11 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
                     self.populate_values_list()
                     self.selected_values = self.values_saved
         finally:
-            self._resume_saving()
+            self.resume_saving()
 
     @property
     def layer_saved(self) -> Optional[QgsMapLayer]:
-        proj = self._project
+        proj = self.project
         layer_id, type_conversion_ok = proj.readEntry(
             self.plugin_id,
             "layer",
@@ -153,7 +153,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @layer_saved.setter
     def layer_saved(self, layer: QgsMapLayer) -> None:
-        self._project.writeEntry(
+        self.project.writeEntry(
             self.plugin_id,
             "layer",
             layer.id(),
@@ -161,7 +161,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def field_saved(self) -> str:
-        loaded_field, type_conversion_ok = self._project.readEntry(
+        loaded_field, type_conversion_ok = self.project.readEntry(
             self.plugin_id,
             "field",
             "",
@@ -170,7 +170,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @field_saved.setter
     def field_saved(self, field: str) -> None:
-        self._project.writeEntry(
+        self.project.writeEntry(
             self.plugin_id,
             "field",
             field,
@@ -178,7 +178,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def values_saved(self) -> set[str]:
-        loaded_values, type_conversion_ok = self._project.readListEntry(
+        loaded_values, type_conversion_ok = self.project.readListEntry(
             self.plugin_id,
             "values",
         )
@@ -186,16 +186,16 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @values_saved.setter
     def values_saved(self, values: Iterable[str]) -> None:
-        self._project.writeEntry(self.plugin_id, "values", list(values))
+        self.project.writeEntry(self.plugin_id, "values", list(values))
 
     @property
     def filtering_saved(self) -> bool:
-        filtering_enabled, type_conversion_ok = self._project.readBoolEntry(self.plugin_id, "filtering_enabled")
+        filtering_enabled, type_conversion_ok = self.project.readBoolEntry(self.plugin_id, "filtering_enabled")
         return filtering_enabled
 
     @filtering_saved.setter
     def filtering_saved(self, value: bool) -> None:
-        self._project.writeEntryBool(
+        self.project.writeEntryBool(
             self.plugin_id,
             "filtering_enabled",
             value,
@@ -203,12 +203,12 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def zoom_saved(self) -> bool:
-        zoom_enabled, type_conversion_ok = self._project.readBoolEntry(self.plugin_id, "zoom_to_results")
+        zoom_enabled, type_conversion_ok = self.project.readBoolEntry(self.plugin_id, "zoom_to_results")
         return zoom_enabled
 
     @zoom_saved.setter
     def zoom_saved(self, value: bool) -> None:
-        self._project.writeEntryBool(
+        self.project.writeEntryBool(
             self.plugin_id,
             "zoom_to_results",
             value,
@@ -216,12 +216,12 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
     @property
     def single_or_multi_saved(self) -> bool:
-        single_enabled, type_conversion_ok = self._project.readBoolEntry(self.plugin_id, "single_select")
+        single_enabled, type_conversion_ok = self.project.readBoolEntry(self.plugin_id, "single_select")
         return single_enabled
 
     @single_or_multi_saved.setter
     def single_or_multi_saved(self, value: bool) -> None:
-        self._project.writeEntryBool(
+        self.project.writeEntryBool(
             self.plugin_id,
             "single_select",
             value,
@@ -231,7 +231,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Saves the current filter settings to the project file
         """
-        if self._loading_project or not self.layer:
+        if self.loading_project or not self.layer:
             return
         self.layer_saved = self.layer
         self.field_saved = self.field
@@ -244,7 +244,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         if self.layer is None:
             self.list_values.clear()
             return False
-        if self.layer not in self._project.mapLayers().values():
+        if self.layer not in self.project.mapLayers().values():
             self.list_values.clear()
             return False
         return isinstance(self.layer, qgis.core.QgsVectorLayer)
@@ -260,7 +260,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         # cob_layer already shows the new layer, so remove the filter from the one it showed before. A layer
         # no longer in the project was removed or belongs to a project that was closed, so leave it.
         previous_layer = self.previous_layer
-        if previous_layer is not self.layer and previous_layer in self._project.mapLayers().values():
+        if previous_layer is not self.layer and previous_layer in self.project.mapLayers().values():
             previous_layer.setSubsetString("")
         self.reset_filter()
         if self.validate_layer():
