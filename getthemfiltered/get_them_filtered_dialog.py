@@ -122,12 +122,14 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
         # Don't save the intermediate states while applying the loaded settings
         self._pause_saving()
         try:
-            if self.filtering_saved:
-                self.chb_go.setChecked(True)
-            if self.zoom_saved:
-                self.chb_zoom.setChecked(True)
+            # Set these whether on or off: the dock outlives a project, so it may still show the previous
+            # project's settings. A project without saved settings reads them all as off, the dock's defaults.
+            self.chb_go.setChecked(self.filtering_saved)
+            self.chb_zoom.setChecked(self.zoom_saved)
             if self.single_or_multi_saved:
                 self.rdo_single.setChecked(True)
+            else:
+                self.rdo_multi.setChecked(True)
             if self.layer_saved:
                 self.layer = self.layer_saved
                 loaded_field = self.field_saved

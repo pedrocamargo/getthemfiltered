@@ -134,3 +134,22 @@ def test_saving_resumes_after_new_project(project, configured_dialog, layer):
     configured_dialog.cob_layer.setLayer(new_layer)
     configured_dialog.cob_field.setField("count")
     assert configured_dialog.field_saved == "count"
+
+
+def test_loading_project_with_settings_off_turns_them_off(project, configured_dialog, layer, tmp_path):
+    """The dock outlives the project, so settings saved as off must not keep the previous project's on."""
+    configured_dialog.chb_go.click()  # Filtering off, saved; zoom off and multiple selection by default
+    path = str(tmp_path / "settings_off.qgz")
+    assert project.write(path)
+
+    configured_dialog.chb_go.click()
+    configured_dialog.chb_zoom.setChecked(True)
+    configured_dialog.rdo_single.setChecked(True)
+
+    reload(project, path)
+    (layer,) = project.mapLayersByName("points")
+    assert not configured_dialog.chb_go.isChecked()
+    assert not configured_dialog.chb_zoom.isChecked()
+    assert configured_dialog.rdo_multi.isChecked()
+    assert sorted(configured_dialog.selected_values) == ["a", "c"]
+    assert layer.subsetString() == ""
