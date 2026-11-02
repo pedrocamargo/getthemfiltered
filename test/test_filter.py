@@ -167,3 +167,23 @@ def test_deselect_all_shows_nothing_in_file_layers(qgis_iface, tmp_path, driver,
 
     sip.delete(dialog)
     QgsProject.instance().removeMapLayer(layer.id())
+
+
+def test_switching_layer_removes_filter_from_previous_layer(qgis_iface):
+    layer = create_test_layer()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+    other_layer = create_test_layer()
+    QgsProject.instance().addMapLayer(other_layer)
+
+    dialog.chb_go.click()
+    dialog.list_values.clearSelection()
+    dialog.list_values.findItems("A", QtCore.Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+    assert layer.featureCount() == 2
+
+    dialog.cob_layer.setLayer(other_layer)
+    assert layer.subsetString() == ""
+    assert layer.featureCount() == 5
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+    QgsProject.instance().removeMapLayer(other_layer.id())

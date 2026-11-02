@@ -78,6 +78,8 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Extra attributes
         self.values_loaded = False
+        # The layer the dock was on before cob_layer changed, to remove its filter
+        self.previous_layer: Optional[QgsMapLayer] = None
         self.add_fields_to_cboxes()
         self.load_saved_filter()
 
@@ -255,6 +257,11 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
 
     def add_fields_to_cboxes(self) -> None:
+        # cob_layer already shows the new layer, so remove the filter from the one it showed before. A layer
+        # no longer in the project was removed or belongs to a project that was closed, so leave it.
+        previous_layer = self.previous_layer
+        if previous_layer is not self.layer and previous_layer in self._project.mapLayers().values():
+            previous_layer.setSubsetString("")
         self.reset_filter()
         if self.validate_layer():
             self.cob_field.setLayer(self.layer)
@@ -262,6 +269,7 @@ class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
             self.changed_field()
         elif not isinstance(self.layer, qgis.core.QgsVectorLayer):
             self.layer = None
+        self.previous_layer = self.layer
 
     def changed_field(self) -> None:
         self.reset_filter()
