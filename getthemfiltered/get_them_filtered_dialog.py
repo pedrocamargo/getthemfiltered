@@ -8,136 +8,343 @@
 
 """
 
+from __future__ import annotations
+
+import contextlib
 import os
 import sys
+from typing import TYPE_CHECKING, Collection, Iterable, Optional, Union, cast
 
 import qgis
-from qgis.core import QgsProject
-from qgis.PyQt import QtCore, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.core import QgsMapLayer, QgsProject
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import Qt, pyqtSignal
 
+if TYPE_CHECKING:
+    # Only for annotations, which aren't evaluated at runtime. typing.Literal needs Python 3.8, newer than
+    # some QGIS 3 releases ship
+    from typing import Literal
 
 sys.modules["qgsfieldcombobox"] = qgis.gui
 sys.modules["qgsmaplayercombobox"] = qgis.gui
-
-try:
-    from qgis.core import QgsMapLayerRegistry  # noqa: F401
-except ImportError:
-    pass
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), "forms/ui_filter.ui"))
 
 
 class GetThemFilteredDialog(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
+    plugin_id = "getthemfiltered"
+
+    @property
+    def project(self) -> QgsProject:
+        return cast(QgsProject, QgsProject.instance())
 
     def __init__(self, iface, parent=None):
-        QtWidgets.QDockWidget.__init__(self, None, QtCore.Qt.WindowType.WindowStaysOnTopHint)
+        QtWidgets.QDockWidget.__init__(self, None, Qt.WindowType.WindowStaysOnTopHint)
 
         self.setupUi(self)
         self.iface = iface
 
+        # While QGIS clears or reads a project, the combo boxes fire change
+        # signals as layers go away or are loaded. Those must not be saved, or
+        # they overwrite the settings just read from the project file. Likewise
+        # during setup here, until load_saved_filter() has run.
+        self.loading_project = True
+        self.project.aboutToBeCleared.connect(self.pause_saving)
+        self.project.cleared.connect(self.resume_saving)
+        self.project.loadingLayer.connect(self.pause_saving)
+        self.project.readProject.connect(self.load_saved_filter)
+
         self.rdo_single.toggled.connect(self.single_or_multi)
+        self.rdo_single.toggled.connect(self.save_filter)
         # self.rdo_multi.toggled.connect(self.single_or_multi)
 
         self.cob_layer.layerChanged.connect(self.add_fields_to_cboxes)
+        self.cob_layer.layerChanged.connect(self.save_filter)
 
-        self.cob_field.fieldChanged.connect(self.changed_field)
+        self.cob_field.fieldChanged.connect(self.populate_values_list)
+        self.cob_field.fieldChanged.connect(self.save_filter)
 
-        self.list_values.itemSelectionChanged.connect(self.selected_value)
+        self.list_values.itemSelectionChanged.connect(self.value_selected)
+        self.list_values.itemSelectionChanged.connect(self.save_filter)
         self.chb_zoom.toggled.connect(self.do_zooming)
+        self.chb_zoom.toggled.connect(self.save_filter)
+
+        self.chb_go.clicked.connect(self.filtering_toggled)
+        self.chb_go.clicked.connect(self.save_filter)
 
         self.but_deselect_all.clicked.connect(self.deselect_all)
         self.but_select_all.clicked.connect(self.select_all)
 
         # Extra attributes
-        self.layer = None
-        self.field = None
-
+        self.values_loaded = False
+        # The layer the dock was on before cob_layer changed, to remove its filter
+        self.previous_layer: Optional[QgsMapLayer] = None
         self.add_fields_to_cboxes()
+        self.load_saved_filter()
 
-    def check_layer(self):
+    @property
+    def layer(self) -> QgsMapLayer:
+        return self.cob_layer.currentLayer()
+
+    @layer.setter
+    def layer(self, layer: QgsMapLayer) -> None:
+        self.cob_layer.setLayer(layer)
+        self.cob_field.setLayer(layer)
+
+    @property
+    def field(self) -> str:
+        return self.cob_field.currentField()
+
+    @field.setter
+    def field(self, fieldname: Optional[str]) -> None:
+        self.cob_field.setField(fieldname)
+        if not fieldname:
+            self.list_values.clear()
+
+    def disconnect_project(self) -> None:
+        """
+        Stops reacting to the project, e.g. when the plugin is unloaded, so a leftover dialog can't change it
+        """
+        self.project.aboutToBeCleared.disconnect(self.pause_saving)
+        self.project.cleared.disconnect(self.resume_saving)
+        self.project.loadingLayer.disconnect(self.pause_saving)
+        self.project.readProject.disconnect(self.load_saved_filter)
+
+    def pause_saving(self) -> None:
+        self.loading_project = True
+
+    def resume_saving(self) -> None:
+        self.loading_project = False
+
+    def load_saved_filter(self) -> None:
+        """
+        Loads any saved filters from the project file
+        """
+        # Don't save the intermediate states while applying the loaded settings
+        self.pause_saving()
+        try:
+            # Set these whether on or off: the dock outlives a project, so it may still show the previous
+            # project's settings. A project without saved settings reads them all as off, the dock's defaults.
+            self.chb_go.setChecked(self.filtering_saved)
+            self.chb_zoom.setChecked(self.zoom_saved)
+            if self.single_or_multi_saved:
+                self.rdo_single.setChecked(True)
+            else:
+                self.rdo_multi.setChecked(True)
+            if self.layer_saved:
+                self.layer = self.layer_saved
+                loaded_field = self.field_saved
+                if loaded_field:
+                    self.field = loaded_field
+                    self.populate_values_list()
+                    self.selected_values = self.values_saved
+        finally:
+            self.resume_saving()
+
+    @property
+    def layer_saved(self) -> Optional[QgsMapLayer]:
+        proj = self.project
+        layer_id, type_conversion_ok = proj.readEntry(
+            self.plugin_id,
+            "layer",
+        )
+        return proj.mapLayer(layer_id)
+
+    @layer_saved.setter
+    def layer_saved(self, layer: QgsMapLayer) -> None:
+        self.project.writeEntry(
+            self.plugin_id,
+            "layer",
+            layer.id(),
+        )
+
+    @property
+    def field_saved(self) -> str:
+        loaded_field, type_conversion_ok = self.project.readEntry(
+            self.plugin_id,
+            "field",
+            "",
+        )
+        return loaded_field
+
+    @field_saved.setter
+    def field_saved(self, field: str) -> None:
+        self.project.writeEntry(
+            self.plugin_id,
+            "field",
+            field,
+        )
+
+    @property
+    def values_saved(self) -> set[str]:
+        loaded_values, type_conversion_ok = self.project.readListEntry(
+            self.plugin_id,
+            "values",
+        )
+        return set(loaded_values)
+
+    @values_saved.setter
+    def values_saved(self, values: Iterable[str]) -> None:
+        self.project.writeEntry(self.plugin_id, "values", list(values))
+
+    @property
+    def filtering_saved(self) -> bool:
+        filtering_enabled, type_conversion_ok = self.project.readBoolEntry(self.plugin_id, "filtering_enabled")
+        return filtering_enabled
+
+    @filtering_saved.setter
+    def filtering_saved(self, value: bool) -> None:
+        self.project.writeEntryBool(
+            self.plugin_id,
+            "filtering_enabled",
+            value,
+        )
+
+    @property
+    def zoom_saved(self) -> bool:
+        zoom_enabled, type_conversion_ok = self.project.readBoolEntry(self.plugin_id, "zoom_to_results")
+        return zoom_enabled
+
+    @zoom_saved.setter
+    def zoom_saved(self, value: bool) -> None:
+        self.project.writeEntryBool(
+            self.plugin_id,
+            "zoom_to_results",
+            value,
+        )
+
+    @property
+    def single_or_multi_saved(self) -> bool:
+        single_enabled, type_conversion_ok = self.project.readBoolEntry(self.plugin_id, "single_select")
+        return single_enabled
+
+    @single_or_multi_saved.setter
+    def single_or_multi_saved(self, value: bool) -> None:
+        self.project.writeEntryBool(
+            self.plugin_id,
+            "single_select",
+            value,
+        )
+
+    def save_filter(self) -> None:
+        """
+        Saves the current filter settings to the project file
+        """
+        if self.loading_project or not self.layer:
+            return
+        self.layer_saved = self.layer
+        self.field_saved = self.field
+        self.values_saved = self.selected_values
+        self.filtering_saved = self.chb_go.isChecked()
+        self.zoom_saved = self.chb_zoom.isChecked()
+        self.single_or_multi_saved = self.rdo_single.isChecked()
+
+    def validate_layer(self) -> bool:
         if self.layer is None:
             self.list_values.clear()
             return False
-        if self.layer not in QgsProject.instance().mapLayers().values():
+        if self.layer not in self.project.mapLayers().values():
             self.list_values.clear()
             return False
-        if not isinstance(self.layer, qgis.core.QgsVectorLayer):
-            return False
-        return True
+        return isinstance(self.layer, qgis.core.QgsVectorLayer)
 
-    def single_or_multi(self):
+    def single_or_multi(self) -> None:
         if self.rdo_single.isChecked():
             self.deselect_all()
             self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         else:
             self.list_values.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
 
-    def add_fields_to_cboxes(self):
+    def add_fields_to_cboxes(self) -> None:
+        # cob_layer already shows the new layer, so remove the filter from the one it showed before. A layer
+        # no longer in the project was removed or belongs to a project that was closed, so leave it.
+        previous_layer = self.previous_layer
+        if previous_layer is not self.layer and previous_layer in self.project.mapLayers().values():
+            previous_layer.setSubsetString("")
         self.reset_filter()
-        self.layer = self.cob_layer.currentLayer()
-        self.field = None
-        if self.check_layer():
+        if self.validate_layer():
             self.cob_field.setLayer(self.layer)
+            self.field = None
             self.changed_field()
-        else:
-            if not isinstance(self.layer, qgis.core.QgsVectorLayer):
-                self.layer = None
+        elif not isinstance(self.layer, qgis.core.QgsVectorLayer):
+            self.layer = None
+        self.previous_layer = self.layer
 
-    def changed_field(self):
+    def changed_field(self) -> None:
         self.reset_filter()
-        self.field = self.cob_field.currentField()
-        self.do_filtering()
 
-    def reset_filter(self):
-        if self.check_layer():
+    def reset_filter(self) -> None:
+        if self.validate_layer():
             self.layer.setSubsetString("")
 
-    def do_filtering(self):
-        if not self.check_layer():
-            return
-        table = self.list_values
-        table.clear()
+    def populate_values_list(self) -> None:
+        # List values from the whole layer, not just what the last filter left
+        self.reset_filter()
+        self.list_values.clear()
 
         idx = self.layer.dataProvider().fieldNameIndex(self.field)
         values = sorted(str(value) for value in self.layer.uniqueValues(idx))
-        table.addItems(values)
-        self.select_all()
-        # for v in set(values):
-        #     it = QtWidgets.QListWidgetItem(str(v))
-        #     table.addItem(it)
-        #     it.setSelected(True)
+        self.list_values.addItems(values)
+        if self.values_loaded:
+            self.select_all()
+        self.values_loaded = True
 
-    def do_zooming(self):
+    def do_zooming(self) -> None:
         if self.chb_zoom.isChecked():
             self.iface.setActiveLayer(self.layer)
             self.iface.zoomToActiveLayer()
 
-    def selected_value(self):
-        if self.chb_go.isChecked():
-            selected_items = [i.text() for i in self.list_values.selectedItems()]
-            if selected_items:
-                self.apply_filter(selected_items)
+    def filtering_toggled(self) -> None:
+        # apply_filter() removes the filter when filtering is off
+        self.apply_filter(self.selected_values)
 
-    def apply_filter(self, list_of_values):
-        if not self.check_layer():
+    def value_selected(self) -> None:
+        if self.chb_go.isChecked():
+            values = self.selected_values
+            if values:
+                self.apply_filter(values)
+
+    def apply_filter(self, list_of_values: Union[Collection[str], Literal[True]]) -> None:
+        if not self.validate_layer():
             return
 
-        filter_expression = "\"{}\" = '{}'".format(self.field, list_of_values[0])
-        if len(list_of_values) > 1:
-            for i in list_of_values[1:]:
-                filter_expression = filter_expression + " OR \"{}\" = '{}'".format(self.field, i)
+        if not self.chb_go.isChecked() or list_of_values is True or self.all_selected:
+            filter_expression = ""
+        elif not list_of_values:
+            # Return nothing. Not TRUE or FALSE, which OGR's SQL dialect (e.g. GeoJSON, shapefiles) doesn't know
+            filter_expression = "1 = 0"
+        else:
+            formatted_list_of_values = ", ".join(f"'{value}'" for value in list_of_values)
+            filter_expression = f'"{self.field}" IN ({formatted_list_of_values})'
         self.layer.setSubsetString(filter_expression)
 
         self.do_zooming()
 
-    def deselect_all(self):
+    def deselect_all(self) -> None:
         self.list_values.clearSelection()
+        self.apply_filter([])
 
-    def select_all(self):
+    def select_all(self) -> None:
         self.list_values.selectAll()
+        self.apply_filter(True)
 
-    def closeEvent(self, event):
+    @property
+    def all_selected(self) -> bool:
+        return all(item.isSelected() for item in self.list_values.findItems("*", Qt.MatchFlag.MatchWildcard))
+
+    @property
+    def selected_values(self) -> list[str]:
+        return [item.text() for item in self.list_values.selectedItems()]
+
+    @selected_values.setter
+    def selected_values(self, input_values: Iterable[str]) -> None:
+        self.list_values.clearSelection()
+        for value in input_values:
+            with contextlib.suppress(IndexError):
+                self.list_values.findItems(value, Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+        self.value_selected()
+
+    def closeEvent(self, event) -> None:
         self.closingPlugin.emit()
         event.accept()

@@ -1,12 +1,15 @@
+import pytest
 from qgis.core import (
+    QgsCoordinateTransformContext,
     QgsFeature,
     QgsField,
     QgsGeometry,
     QgsPointXY,
     QgsProject,
+    QgsVectorFileWriter,
     QgsVectorLayer,
 )
-from qgis.PyQt import QtCore, QtWidgets
+from qgis.PyQt import QtCore, QtWidgets, sip
 
 from getthemfiltered.get_them_filtered_dialog import GetThemFilteredDialog
 
@@ -71,8 +74,9 @@ def test_filter_dialog_workflow(qgis_iface):
     assert dialog.list_values.selectionMode() == QtWidgets.QAbstractItemView.SelectionMode.SingleSelection
 
     # Test filtering single value
+    dialog.chb_go.setChecked(True)
     dialog.apply_filter(["A"])
-    assert layer.subsetString() == "\"category\" = 'A'"
+    assert layer.subsetString() == "\"category\" IN ('A')"
 
     # Test multi selection mode
     dialog.rdo_multi.setChecked(True)
@@ -81,7 +85,7 @@ def test_filter_dialog_workflow(qgis_iface):
 
     # Test filtering multiple values
     dialog.apply_filter(["A", "B"])
-    assert layer.subsetString() == "\"category\" = 'A' OR \"category\" = 'B'"
+    assert layer.subsetString() == "\"category\" IN ('A', 'B')"
 
     # Test select all and deselect all
     dialog.select_all()
@@ -96,3 +100,90 @@ def test_filter_dialog_workflow(qgis_iface):
 
     # Clean up project
     QgsProject.instance().removeMapLayer(layer.id())
+
+
+def make_filtering_dialog(qgis_iface, layer):
+    # Earlier tests leave their settings in the shared project, and a new dialog loads them
+    QgsProject.instance().clear()
+    QgsProject.instance().addMapLayer(layer)
+    dialog = GetThemFilteredDialog(qgis_iface)
+    dialog.cob_layer.setLayer(layer)
+    dialog.cob_field.setField("category")
+    dialog.rdo_multi.setChecked(True)
+    return dialog
+
+
+def test_checking_do_filtering_applies_selection(qgis_iface):
+    layer = create_test_layer()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+
+    dialog.list_values.clearSelection()
+    dialog.list_values.findItems("A", QtCore.Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+    assert layer.featureCount() == 5
+
+    dialog.chb_go.click()
+    assert layer.subsetString() == "\"category\" IN ('A')"
+    assert layer.featureCount() == 2
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+def test_unchecking_do_filtering_removes_filter(qgis_iface):
+    layer = create_test_layer()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+
+    dialog.chb_go.click()
+    dialog.list_values.clearSelection()
+    dialog.list_values.findItems("A", QtCore.Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+    assert layer.featureCount() == 2
+
+    dialog.chb_go.click()
+    assert layer.subsetString() == ""
+    assert layer.featureCount() == 5
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+@pytest.mark.parametrize("driver, extension", [("GeoJSON", "geojson"), ("ESRI Shapefile", "shp"), ("GPKG", "gpkg")])
+def test_deselect_all_shows_nothing_in_file_layers(qgis_iface, tmp_path, driver, extension):
+    """The OGR provider passes the filter to the file's SQL dialect, which may not know TRUE or FALSE."""
+    path = str(tmp_path / f"test_layer.{extension}")
+    options = QgsVectorFileWriter.SaveVectorOptions()
+    options.driverName = driver
+    error, *_ = QgsVectorFileWriter.writeAsVectorFormatV3(
+        create_test_layer(), path, QgsCoordinateTransformContext(), options
+    )
+    assert error == QgsVectorFileWriter.WriterError.NoError
+    layer = QgsVectorLayer(path, "test_layer", "ogr")
+    assert layer.isValid()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+
+    dialog.chb_go.click()
+    dialog.deselect_all()
+    assert layer.subsetString() != ""
+    assert layer.featureCount() == 0
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+def test_switching_layer_removes_filter_from_previous_layer(qgis_iface):
+    layer = create_test_layer()
+    dialog = make_filtering_dialog(qgis_iface, layer)
+    other_layer = create_test_layer()
+    QgsProject.instance().addMapLayer(other_layer)
+
+    dialog.chb_go.click()
+    dialog.list_values.clearSelection()
+    dialog.list_values.findItems("A", QtCore.Qt.MatchFlag.MatchExactly)[0].setSelected(True)
+    assert layer.featureCount() == 2
+
+    dialog.cob_layer.setLayer(other_layer)
+    assert layer.subsetString() == ""
+    assert layer.featureCount() == 5
+
+    sip.delete(dialog)
+    QgsProject.instance().removeMapLayer(layer.id())
+    QgsProject.instance().removeMapLayer(other_layer.id())

@@ -61,6 +61,13 @@ class getThemFiltered:
         for action in self.actions:
             self.iface.removePluginMenu(self.tr("&GetThemFiltered"), action)
             self.iface.removeToolBarIcon(action)
+        self.toolbar.deleteLater()
+
+        if self.dockwidget is not None:
+            self.dockwidget.disconnect_project()
+            self.iface.removeDockWidget(self.dockwidget)
+            self.dockwidget.deleteLater()
+            self.dockwidget = None
 
     def widgetVisibilityChanged(self, visible: bool) -> None:
         self.panelAction.setChecked(visible)
